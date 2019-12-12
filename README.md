@@ -1,3 +1,7 @@
-### Ch. 2 - Quantifying C gains and losses from changes in mangrove extent in Thailand
+## Ch. 2 - Synthesizing diverse data sources to quantify net historical carbon emissions from mangrove loss
 
-Jacob Bukoski 
+#### Code and analyses for net carbon impacts of mangrove cover change in Thailand
+
+Jacob J. Bukoski 
+
+  
