@@ -92,6 +92,10 @@ st_write(cngwt, "./data/processed/cstl_prvncs", "cstl_prvncs", driver="ESRI Shap
 # Simard height
 #  minimum: 0.849; maximum: 22.061
 
+library(cluster)
+library(NbClust)
+library(factoextra)
+
 # Union and buffer the chongwats by 10 km 
 
 albersSEAsia <- CRS(" +proj=aea +lat_1=7 +lat_2=-32 +lat_0=-15 +lon_0=125 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs ")
@@ -122,25 +126,35 @@ gmrph_dat <- raster::extract(gmrphStack, as(cngwt_bffr, "Spatial"), cellnumbers 
          tdl = "m2_4326_a",
          id = "cell")
 
-# Identify optimal number of clusters
+# Identify optimal number of clusters using "elbow" method
 
-optClstrs <- data.frame(clstrs = seq(1, 10, 1),
+maxClstrs <- 20
+
+optClstrs <- data.frame(clstrs = seq(1, maxClstrs, 1),
                         tot_wss = NA)
 
-for(i in 1:10) {
+for(i in 1:maxClstrs) {
   
-  kmeansClass <- kmeans(na.omit(gmrph_dat[ , c(2, 3)]), i)
+  kmeansClass <- kmeans(na.omit(gmrph_dat[ , c(2, 3)]), i, nstart = 30)
   optClstrs$tot_wss[i] <- kmeansClass$tot.withinss
     
 }
 
+fviz_nbclust(na.omit(gmrph_dat[, c(2,3)]), kmeans, method = 'wss', k.max = 25, nstart = 30)
+fviz_nbclust(na.omit(gmrph_dat[, c(2,3)]), kmeans, method = 'silhouette', k.max = 25, nstart = 30)
+
 plot(optClstrs)
+  
+# Identify optimal number with the silhouette method    
+
+  
+
 
 # Classify coastline based on optimal number of clusters
 
 idx <- na.omit(gmrph_dat[ , c(1, 2, 3)])
 
-kmeansClass <- kmeans(na.omit(gmrph_dat[ , c(2, 3)]), 2)
+kmeansClass <- kmeans(na.omit(gmrph_dat[ , c(2, 3)]), 3, nstart = 30)
 
 idx <- cbind(idx, kmeansClass$cluster)
 
