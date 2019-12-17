@@ -144,7 +144,7 @@ fviz_nbclust(na.omit(gmrph_dat[, c(2,3)]), kmeans, method = 'wss', k.max = 25, n
 fviz_nbclust(na.omit(gmrph_dat[, c(2,3)]), kmeans, method = 'silhouette', k.max = 25, nstart = 30)
 
 plot(optClstrs)
-  
+    
 # Identify optimal number with the silhouette method    
 
   
