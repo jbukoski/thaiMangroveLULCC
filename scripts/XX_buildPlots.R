@@ -1,6 +1,6 @@
 ## Build plots
 #
-#
+# 
 #
 
 library(tidyverse)
@@ -39,15 +39,19 @@ fig2 <- soil2plot %>%
   facet_grid(. ~ var, scales = "free_x",
              labeller = labeller(var = soil_labs)) +
   ylab("Depth (cm)") +
+  scale_linetype_discrete(name = "Type", labels = c("Aquaculture", "Mangrove")) +
+  scale_color_discrete(name = "Site", labels = c("Krabi River Estuary", "Pak Panang Mangrove", "Palian River Estuary")) +
   theme_bw() +
   theme(axis.title.x = element_blank(),
-        legend.position = "bottom")
+        legend.position = "bottom",
+        legend.box = "vertical",
+        legend.spacing.y = unit(0.1, "cm"))
 
-ggplot2::ggsave(site_map, device = "jpeg", 
-                filename = paste0(fig_dir, "fig_01_site_map.jpg"), 
+ggplot2::ggsave(fig2, device = "jpeg", 
+                filename = paste0(fig_dir, "draft_fig2_depth_plots.jpg"), 
                 width = 8.5, height = 5.5, units = "in")
 
-#-------------------------------------------------------
+  #-------------------------------------------------------
 # Carbon data
 
 c_dat <- read_csv("./data/processed/th_carbon.csv")
@@ -60,8 +64,12 @@ cDat2plot <- c_dat %>%
             se_val = std.error(value)) %>%
   mutate(avg_val = ifelse(var %in% c("soc", "bgc_ha"), avg_val * -1, avg_val))
 
-ggplot(dat2plot) +
-  geom_bar(aes(x = type, y = avg_val, col = var), stat = "identity") +
-  facet_grid(. ~ site)
+ggplot(cDat2plot) +
+  geom_bar(aes(x = type, y = avg_val, col = var, fill = var), stat = "identity") +
+  facet_grid(. ~ site) +
+  theme_bw()
 
 head(c_dat)
+
+
+
