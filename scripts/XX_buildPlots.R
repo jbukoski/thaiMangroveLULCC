@@ -58,7 +58,8 @@ ggplot2::ggsave(fig2, device = "jpeg",
                 filename = paste0(fig_dir, "draft_fig2_depth_plots.jpg"), 
                 width = 8.5, height = 5.5, units = "in")
 
-  #-------------------------------------------------------
+
+#-------------------------------------------------------
 # Carbon data
 
 c_dat <- read_csv("./data/processed/th_carbon.csv")
@@ -78,5 +79,57 @@ ggplot(cDat2plot) +
 
 head(c_dat)
 
+#-----------------------------------
 
+soil_params %>%
+  ggplot() +
+  facet_grid(. ~ site) +
+  geom_boxplot(aes(x = type, y = poc))
 
+classes <- c_dat %>% 
+  group_by(site, type, plot) %>% 
+  summarize(agb = mean(agb_ha)) %>% 
+  mutate(type_2 = ifelse(type == "aquaculture" & agb > 0, "aqua_regen", type)) %>% 
+  ungroup %>% 
+  dplyr::select(site, type, type_2, plot) %>%
+  arrange(site, type_2, plot)
+
+poc_plot <- soil_params %>%
+  left_join(classes, by = c("site", "type", "plot")) %>%
+  ggplot() +
+  facet_wrap(. ~ site) +
+  geom_boxplot(aes(x = as.factor(interval), y = poc, fill = type)) +
+  theme_bw() +
+  ylab("Organic Carbon (%)") +
+  xlab("Depth interval") +
+  theme(legend.position = "none")
+
+bd_plot <- soil_params %>%
+  left_join(classes, by = c("site", "type", "plot")) %>%
+  ggplot() +
+  facet_wrap(. ~ site) +
+  geom_boxplot(aes(x = as.factor(interval), y = bd, fill = type)) +
+  theme_bw() +
+  ylab("Bulk Density (g cm-3)") +
+  xlab("Depth interval") +
+  theme(legend.position = "bottom")
+
+fig3 <- ggarrange(poc_plot, bd_plot, nrow = 2)
+
+ggplot2::ggsave(fig3, device = "jpeg", 
+                filename = paste0(fig_dir, "draft_fig3_soil_luc.jpg"), 
+                width = 8.5, height = 8, units = "in")
+
+#-------------------------
+# Scrap
+
+soil_params %>%
+  #filter(site == "Trang") %>%
+  #mutate(poc = ifelse(site == "Trang" & type == "aquaculture", poc / 2.06, poc)) %>%
+  ggplot() +
+  facet_grid(. ~ site) +
+  geom_point(aes(x = bd, y = poc, col = type)) +
+  ylab("percent organic carbon") +
+  xlab("bulk density") +
+  theme_bw() +
+  theme(legend.position = "bottom")
