@@ -32,16 +32,23 @@ names(soil_labs) = c("bd", "c_dens", "poc")
 
 fig2 <- soil2plot %>%
   filter(!(var %in% c("soc_per_ha"))) %>%
-  ggplot() +
-  geom_path(aes(x = avg_val, y = depth, col = site, lty = type)) +
-  geom_errorbarh(aes(xmin = avg_val - se_val, xmax = avg_val + se_val, y = depth,
-                     col = site, lty = type, height = 2)) +
-  facet_grid(. ~ var, scales = "free_x",
-             labeller = labeller(var = soil_labs)) +
-  ylab("Depth (cm)") +
+  group_by(site, type, var) %>%
+  do(augment(
+    loess(avg_val ~ depth, data = .),
+    newdata = data.frame(depth = seq(min(.$depth), max(.$depth), l = 286))
+  )) %>%
+  left_join(select(soil2plot, site, type, var, depth, se_val), 
+            by = c("site", "type", "var", "depth")) %>%
+  ggplot(aes(y = depth, x = .fitted)) +
+  facet_grid(~ var, scales = "free_x", 
+             labeller = labeller(var = soil_labs)) + 
+  geom_path(aes(x = .fitted, col = site, lty = type)) +
+  geom_errorbarh(aes(xmin = .fitted - se_val, xmax = .fitted + se_val, y = depth,
+                       col = site, lty = type, height = 2)) +
   scale_linetype_discrete(name = "Type", labels = c("Aquaculture", "Mangrove")) +
   scale_color_discrete(name = "Site", labels = c("Krabi River Estuary", "Pak Panang Mangrove", "Palian River Estuary")) +
   theme_bw() +
+  ylab("Depth (cm)") +
   theme(axis.title.x = element_blank(),
         legend.position = "bottom",
         legend.box = "vertical",

@@ -21,18 +21,17 @@ soil_dat %>%
 
 
 soil_dat %>%
-  filter(interval < 5) %>%
   mutate(mass = bd * int_volume * 100 / 1000) %>%
-  group_by(site, type, plot, subplot) %>%
+  group_by(site, type, plot, subplot, interval) %>%
   summarize(total_mass = sum(mass),
             depth = mean(avg_depth),
             avg_bd = mean(bd)) %>%
-  group_by(site, type) %>%
+  group_by(site, type, interval) %>%
   summarize(avg_mass = mean(total_mass),
             se_mass = std.error(total_mass),
             avg_bd = mean(avg_bd),
             se_bd = std.error(avg_bd),
-            depth = mean(depth))
+            depth = mean(depth)) %>% View
 
 soil_dat %>%
   group_by(site, type, interval) %>%
