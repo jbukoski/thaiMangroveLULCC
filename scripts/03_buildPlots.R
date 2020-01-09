@@ -140,20 +140,66 @@ soil_params %>%
   #mutate(poc = ifelse(site == "Trang" & type == "aquaculture", poc / 2.06, poc)) %>%
   ggplot() +
   #facet_grid(. ~ site) +
-  geom_boxplot(aes(x = as.factor(plot), y = poc, col = type)) +
+  geom_point(aes(x = as.factor(plot), y = c_dens, col = type)) +
   theme_bw() +
   theme(legend.position = "bottom")
 
-soil_params %>%
+site_level_dat <- soil_params %>%
   #filter(site == "Trang") %>%
+  filter(!plot %in% c("T6", "12s", "8")) %>%
   group_by(site, type) %>%
   summarize(poc_avg = mean(poc),
             poc_avg_se = std.error(poc),
+            c_dens_avg = mean(c_dens),
+            c_dens_avg_se = std.error(c_dens),
             max_poc = max(poc),
             min_poc = min(poc),
             med_poc = median(poc),
             bd_avg = mean(bd),
-            bd_avg_se = std.error(bd))
+            bd_avg_se = std.error(bd), 
+            poc_lwr = poc_avg - poc_avg_se,
+            poc_upr = poc_avg + poc_avg_se,
+            c_dens_lwr = c_dens_avg - c_dens_avg_se,
+            c_dens_upr = c_dens_avg + c_dens_avg_se,
+            bd_lwr = bd_avg + bd_avg_se,
+            bd_upr = bd_avg - bd_avg_se)
+
+bd <- site_level_dat %>%
+  ggplot() +
+  facet_grid(. ~ site) +
+  geom_bar(aes(x = as.factor(type), y = bd_avg), stat = "identity") +
+  geom_errorbar(aes(x = as.factor(type), ymax = bd_upr, ymin = bd_lwr), width = 0.2) +
+  theme_bw()
+
+poc <- site_level_dat %>%
+  ggplot() +
+  facet_grid(. ~ site) +
+  geom_bar(aes(x = as.factor(type), y = poc_avg), stat = "identity") +
+  geom_errorbar(aes(x = as.factor(type), ymax = poc_upr, ymin = poc_lwr), width = 0.2) +
+  theme_bw()
+
+c_dens <- site_level_dat %>%
+  ggplot() +
+  facet_grid(. ~ site) +
+  geom_bar(aes(x = as.factor(type), y = c_dens_avg), stat = "identity") +
+  geom_errorbar(aes(x = as.factor(type), ymax = c_dens_upr, ymin = c_dens_lwr), width = 0.2) +
+  theme_bw()
+
+ggarrange(bd, poc, c_dens, nrow = 3)
+
+set.seed(1)
+
+soil_params %>%
+  filter(!(site == "Trang" & plot %in% c("12s", "8", "T6"))) %>%
+  ggplot() +
+  facet_grid(. ~ site) +
+  geom_jitter(aes(x = as.factor(type), y = poc, col = as.factor(interval)), 
+              width = 0.25, alpha = 0.5) +
+  #geom_boxplot(aes(x = as.factor(type), y = poc), width = 0.25) +
+  theme_tufte()
+
+  #-----------------------------------
+# Build dataset with poc & bd quantiles for visualizing
 
 meta <- read_csv("./data/processed/th_meta.csv")
 

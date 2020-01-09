@@ -36,13 +36,12 @@ ogr2ogr -dialect sqlite -sql "SELECT ST_BUFFER(geometry, 0.000001) FROM GMW_2016
 # Step 7
 # For 1996
 
-cp ./data/scratch/empty.tif ./data/scratch/GMW_2016_thai.tif
 cp ./data/scratch/empty.tif ./data/scratch/GMW_1996_thai.tif
+cp ./data/scratch/empty.tif ./data/scratch/GMW_2016_thai.tif
 
-gdal_rasterize -burn 1 -l GMW_2016_thai ./data/processed/GMW_2016_thai/GMW_2016_thai.shp ./data/scratch/GMW_2016_thai.tif
+gdal_rasterize -burn 1 -l GMW_1996_thai ./data/processed/GMW_1996_thai/GMW_1996_thai.shp ./data/scratch/GMW_1996_thai.tif
 
-gdal_rasterize -burn 2 -l GMW_1996_thai ./data/processed/GMW_1996_thai/GMW_1996_thai.shp ./data/scratch/GMW_1996_thai.tif
+gdal_rasterize -burn 2 -l GMW_2016_thai ./data/processed/GMW_2016_thai/GMW_2016_thai.shp ./data/scratch/GMW_2016_thai.tif
 
-gdal_calc.py -A ./data/scratch/GMW_1996_thai.tif -B ./data/scratch/GMW_2016_thai.tif --calc "A+B" --outfile=./data/scratch/luc.tif
 
 
