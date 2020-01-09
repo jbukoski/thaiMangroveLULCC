@@ -2,7 +2,7 @@
 #
 # 
 #
-
+  
 library(tidyverse)
 library(plotrix)
 library(ggthemes)
@@ -133,3 +133,35 @@ soil_params %>%
   xlab("bulk density") +
   theme_bw() +
   theme(legend.position = "bottom")
+
+
+soil_params %>%
+  filter(site == "Trang") %>%
+  #mutate(poc = ifelse(site == "Trang" & type == "aquaculture", poc / 2.06, poc)) %>%
+  ggplot() +
+  #facet_grid(. ~ site) +
+  geom_boxplot(aes(x = as.factor(plot), y = poc, col = type)) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+soil_params %>%
+  #filter(site == "Trang") %>%
+  group_by(site, type) %>%
+  summarize(poc_avg = mean(poc),
+            poc_avg_se = std.error(poc),
+            max_poc = max(poc),
+            min_poc = min(poc),
+            med_poc = median(poc),
+            bd_avg = mean(bd),
+            bd_avg_se = std.error(bd))
+
+meta <- read_csv("./data/processed/th_meta.csv")
+
+dat <- meta %>%
+  left_join(soil_params, by = c("site", "type", "plot", "subplot")) %>%
+  filter(site == "Trang", interval == 1) %>%
+  mutate(poc_qs = quantcut(poc, q = 5),
+         bd_qs = quantcut(bd, q = 5)) %>%
+  arrange(poc_qs)
+
+write_csv(dat, "~/Desktop/test.csv")

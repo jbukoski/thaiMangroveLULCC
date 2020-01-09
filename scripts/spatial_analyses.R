@@ -48,6 +48,8 @@ intersection_tibble %>%
 
 st_write(intersection_sf, "./data/processed/GMW_2016_thai", "GMW_2016_thai", driver="ESRI Shapefile")
 
+## Need to send back to BASH script to convert to raster
+
 #--------------------------------------------------------
 # Processing DMCR statistics data
 
@@ -206,5 +208,11 @@ rc <- reclassify(simard_agb, rclmat)
 
 plot(simard)
 
+#--------------------------------------------------
 
+thai1996 <- raster("./data/processed/GMW_1996_thai.tif")
+thai2016 <- raster("./data/processed/GMW_2016_thai.tif")
 
+data <- stack(thai1996, thai2016)
+
+plot(thai1996)

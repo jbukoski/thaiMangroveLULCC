@@ -3,32 +3,46 @@
 # Preprocessing of mangrove shapefiles
 # 1. Clip to Thailand
 # 2. Buffer by cms to repair geometries
+
+# Import to R and run the following
 # 3. Use raster:intersect() in R to clip mangrove extents by chongwat
 # 4. Convert to equal area projection
 # 5. Calculate area of each polygon
 # 6. Save for visualization and export
 
+# Convert vector files to rasters for analyses and plotting
+# 7. Rasterize using GDAL
+
 # For 1996
 
+# Step 1. Clip to Thailand
 ogr2ogr -spat 97 5 103 15 -clipsrc ./data/raw/tha_admbnda_adm0_rtsd_20190221.shp ./data/processed/GMW_1996_thai_clipped.shp ./data/raw/GMW_1996_v2.shp 
 
+# Step 2. Buffer to repair geometries
 ogr2ogr -dialect sqlite -sql "SELECT ST_BUFFER(geometry, 0.000001) FROM GMW_1996_thai" ./data/scratch/GMW_1996_buffered.shp ./data/processed/GMW_1996_thai_clipped.shp
-
-#ogr2ogr -t_srs EPSG:102028 ./data/scratch/GMW_1996_thai_rpj.shp ./data/scratch/GMW_1996_buffered.shp
-#ogr2ogr -sql "SELECT *, OGR_GEOM_AREA AS AREA FROM GMW_1996_thai_rpj" ./data/scratch/GMW_1996_areas.shp ./data/scratch/GMW_1996_thai_rpj.shp
 
 
 # For 2016  
 
+# Step 1. Clip to Thailand
 ogr2ogr -spat 97 5 103 15 -clipsrc ./data/raw/tha_admbnda_adm0_rtsd_20190221.shp ./data/processed/GMW_2016_thai.shp ./data/raw/GMW_2016_v2.shp 
 
+# Step 2. Buffer to repair geometries
 ogr2ogr -dialect sqlite -sql "SELECT ST_BUFFER(geometry, 0.000001) FROM GMW_2016_thai" ./data/scratch/GMW_2016_thai_buffered.shp ./data/processed/GMW_2016_thai.shp
 
-#ogr2ogr -t_srs EPSG:102028 ./data/processed/GMW_2016_thai_rpj.shp ./data/processed/GMW_2016_thai.shp
-#ogr2ogr -sql "SELECT *, OGR_GEOM_AREA AS AREA FROM GMW_2016_thai_rpj" ./data/processed/GMW_2016_thai_areas.shp ./data/processed/GMW_2016_thai_rpj.shp
 
+# Steps 3 - 6 in R script (spatial_analysis.R)
 
+# Step 7
+# For 1996
 
+cp ./data/scratch/empty.tif ./data/scratch/GMW_2016_thai.tif
+cp ./data/scratch/empty.tif ./data/scratch/GMW_1996_thai.tif
 
+gdal_rasterize -burn 1 -l GMW_2016_thai ./data/processed/GMW_2016_thai/GMW_2016_thai.shp ./data/scratch/GMW_2016_thai.tif
+
+gdal_rasterize -burn 2 -l GMW_1996_thai ./data/processed/GMW_1996_thai/GMW_1996_thai.shp ./data/scratch/GMW_1996_thai.tif
+
+gdal_calc.py -A ./data/scratch/GMW_1996_thai.tif -B ./data/scratch/GMW_2016_thai.tif --calc "A+B" --outfile=./data/scratch/luc.tif
 
 
