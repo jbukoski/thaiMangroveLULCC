@@ -184,7 +184,7 @@ c_dens <- site_level_dat %>%
   geom_bar(aes(x = as.factor(type), y = c_dens_avg), stat = "identity") +
   geom_errorbar(aes(x = as.factor(type), ymax = c_dens_upr, ymin = c_dens_lwr), width = 0.2) +
   theme_bw()
-
+  
 ggarrange(bd, poc, c_dens, nrow = 3)
 
 set.seed(1)
