@@ -43,5 +43,10 @@ gdal_rasterize -burn 1 -l GMW_1996_thai ./data/processed/GMW_1996_thai/GMW_1996_
 
 gdal_rasterize -burn 2 -l GMW_2016_thai ./data/processed/GMW_2016_thai/GMW_2016_thai.shp ./data/scratch/GMW_2016_thai.tif
 
+gdal_translate -of VRT ./data/processed/GMW_1996_thai.tif ./data/processed/gmw_1996_thai.vrt -a_nodata none
+gdal_translate -of VRT ./data/processed/GMW_2016_thai.tif ./data/processed/gmw_2016_thai.vrt -a_nodata none
 
+gdal_calc.py -A ./data/processed/GMW_1996_thai.tif -B ./data/processed/GMW_2016_thai.tif --calc="A+B" --outfile=./data/processed/luc.tif
+
+gdal_translate -srs_nodata 0 -co COMPRESS=DEFLATE ./data/processed/luc.tif ./data/processed/gmw_luc.tif
 

@@ -210,9 +210,53 @@ plot(simard)
 
 #--------------------------------------------------
 
+suppressMessages(library(rasterVis))
+suppressMessages(library(rnaturalearth))
+suppressMessages(library(rnaturalearthdata))
+
 thai1996 <- raster("./data/processed/GMW_1996_thai.tif")
 thai2016 <- raster("./data/processed/GMW_2016_thai.tif")
+gmw_luc <- raster("./data/processed/gmw_luc.tif")
 
-data <- stack(thai1996, thai2016)
+world <- ne_countries(scale = "medium", returnclass = "sf")
 
-plot(thai1996)
+#data <- stack(thai1996, thai2016)
+#luc <- sum(data, na.rm = T)
+
+#luc_list <- splitRaster(luc, nx = 2, ny = 2)
+
+#luc_df <- as.data.frame(gmw_luc, na.rm = T, xy = T)
+#luc_df <- luc_df %>%
+#  rename(value = "2", x = "x", y = "gmw_luc")
+
+e <- extent(99.5, 101.5, 13, 13.8)
+luc_centro <- crop(gmw_luc, e)
+
+luc_df <- as.data.frame(luc_centro, na.rm = T, xy = T) %>%
+  rename(value = "2", x = "x", y = "gmw_luc")
+
+myMap <- get_stamenmap(bbox = c(left = 99,
+                                bottom = 13,
+                                right = 101.5,
+                                top = 14),
+                       maptype = "terrain", 
+                       crop = FALSE,
+                       zoom = 11)
+
+#ggmap(myMap)
+
+luc_plot <- ggmap(myMap) +
+  #geom_sf(color = "white", fill = "light grey", size = 0.1) +
+  geom_raster(data = luc_df, aes(x = x, y = y, fill = factor(value))) +
+  theme_bw() +
+  coord_sf(xlim = c(99.8, 101.2), ylim = c(13, 13.8)) +
+  scale_x_continuous(breaks = seq(99, 102, 0.2)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "bottom")
+
+luc_plot
+
+ggplot2::ggsave(luc_plot, device = "jpeg", 
+                filename = "./figs/draft_luc_plot.jpg", 
+                width = 10, height = 9, units = "in")
