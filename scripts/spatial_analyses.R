@@ -254,7 +254,7 @@ luc_plot <- ggmap(myMap) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank(),
         legend.position = "bottom")
-
+    
 luc_plot
 
 ggplot2::ggsave(luc_plot, device = "jpeg", 
