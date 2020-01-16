@@ -210,6 +210,7 @@ plot(simard)
 
 #--------------------------------------------------
 
+suppressMessages(library(ggmap))
 suppressMessages(library(rasterVis))
 suppressMessages(library(rnaturalearth))
 suppressMessages(library(rnaturalearthdata))
@@ -229,34 +230,47 @@ world <- ne_countries(scale = "medium", returnclass = "sf")
 #luc_df <- luc_df %>%
 #  rename(value = "2", x = "x", y = "gmw_luc")
 
-e <- extent(99.5, 101.5, 13, 13.8)
+e <- extent(99.5, 101.5, 12.8, 13.8)
 luc_centro <- crop(gmw_luc, e)
 
 luc_df <- as.data.frame(luc_centro, na.rm = T, xy = T) %>%
-  rename(value = "2", x = "x", y = "gmw_luc")
+  rename(value = "gmw_luc", x = "x", y = "y") %>%
+  mutate(col = ifelse(value == 1, "red", 
+                      ifelse(value == 2, "blue", "green")))
 
-myMap <- get_stamenmap(bbox = c(left = 99,
-                                bottom = 13,
-                                right = 101.5,
-                                top = 14),
-                       maptype = "terrain", 
-                       crop = FALSE,
-                       zoom = 11)
+# myMap <- get_stamenmap(bbox = c(left = 99,
+#                                 bottom = 13,
+#                                 right = 101.5,
+#                                 top = 14),
+#                        maptype = "terrain", 
+#                        crop = FALSE,
+#                        zoom = 11)
 
-#ggmap(myMap)
+ndvi <- raster("./data/processed/centro_ndvi.tif") %>%
+  crop(e)
 
-luc_plot <- ggmap(myMap) +
-  #geom_sf(color = "white", fill = "light grey", size = 0.1) +
+ndvi_150 <- aggregate(ndvi, fact = 5)
+
+ndvi_150_df <- as.data.frame(ndvi_150, na.rm = T, xy = T) %>%
+  rename(y = "y", x = "x", value = "centro_ndvi")
+
+luc_plot <- ggplot() +
+  #geom_raster(data = ndvi_210_df, aes(x = x, y = y, fill = value, alpha = value)) +
+  geom_raster(data = ndvi_150_df, aes(x = x, y = y, alpha = value, colour = "white")) +
+  #scale_fill_gradient(low = "white", high = "black") +
   geom_raster(data = luc_df, aes(x = x, y = y, fill = factor(value))) +
+  scale_fill_manual(values = c("red", "green", "dark green")) +
   theme_bw() +
-  coord_sf(xlim = c(99.8, 101.2), ylim = c(13, 13.8)) +
-  scale_x_continuous(breaks = seq(99, 102, 0.2)) +
+  coord_sf(xlim = c(99.8, 101.2), ylim = c(12.9, 13.7)) +
+  scale_y_continuous(breaks = seq(12.9, 13.7, 0.2)) +
+  scale_x_continuous(breaks = seq(99, 102, 0.5)) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank(),
-        legend.position = "bottom")
-    
+        legend.position = "none")
+      
 luc_plot
 
 ggplot2::ggsave(luc_plot, device = "jpeg", 
-                filename = "./figs/draft_luc_plot.jpg", 
+                filename = "./figs/draft_luc_plot_2.jpg", 
                 width = 10, height = 9, units = "in")
+        
