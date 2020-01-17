@@ -268,7 +268,7 @@ luc_plot <- ggplot() +
         axis.title.y = element_blank(),
         legend.position = "none")
       
-luc_plot
+print(luc_plot)
 
 ggplot2::ggsave(luc_plot, device = "jpeg", 
                 filename = "./figs/draft_luc_plot_2.jpg", 
