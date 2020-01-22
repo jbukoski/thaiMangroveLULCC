@@ -254,6 +254,8 @@ ndvi_150 <- aggregate(ndvi, fact = 5)
 ndvi_150_df <- as.data.frame(ndvi_150, na.rm = T, xy = T) %>%
   rename(y = "y", x = "x", value = "centro_ndvi")
 
+
+
 luc_plot <- ggplot() +
   #geom_raster(data = ndvi_210_df, aes(x = x, y = y, fill = value, alpha = value)) +
   geom_raster(data = ndvi_150_df, aes(x = x, y = y, alpha = value, colour = "white")) +
@@ -269,7 +271,7 @@ luc_plot <- ggplot() +
         legend.position = "none")
       
 print(luc_plot)
-
+  
 ggplot2::ggsave(luc_plot, device = "jpeg", 
                 filename = "./figs/draft_luc_plot_2.jpg", 
                 width = 10, height = 9, units = "in")
