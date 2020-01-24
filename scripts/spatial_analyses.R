@@ -275,4 +275,9 @@ print(luc_plot)
 ggplot2::ggsave(luc_plot, device = "jpeg", 
                 filename = "./figs/draft_luc_plot_2.jpg", 
                 width = 10, height = 9, units = "in")
+
+#-----------------------------
+# Next step for spatial analyses - what is it?
+
+
         
