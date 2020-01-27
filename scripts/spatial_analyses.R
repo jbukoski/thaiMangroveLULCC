@@ -209,6 +209,7 @@ rc <- reclassify(simard_agb, rclmat)
 plot(simard)
 
 #--------------------------------------------------
+# Produce land use change map for central region (i.e., BKK)
 
 suppressMessages(library(ggmap))
 suppressMessages(library(rasterVis))
@@ -234,7 +235,7 @@ e <- extent(99.5, 101.5, 12.8, 13.8)
 luc_centro <- crop(gmw_luc, e)
 
 luc_df <- as.data.frame(luc_centro, na.rm = T, xy = T) %>%
-  rename(value = "gmw_luc", x = "x", y = "y") %>%
+  rename(y = "gmw_luc", x = "x", value = "2") %>%
   mutate(col = ifelse(value == 1, "red", 
                       ifelse(value == 2, "blue", "green")))
 
@@ -251,14 +252,23 @@ ndvi <- raster("./data/processed/centro_ndvi.tif") %>%
 
 ndvi_150 <- aggregate(ndvi, fact = 5)
 
+ndvi_90 <- aggregate(ndvi, fact = 3)
+
 ndvi_150_df <- as.data.frame(ndvi_150, na.rm = T, xy = T) %>%
   rename(y = "y", x = "x", value = "centro_ndvi")
 
+ndvi_90_df <- as.data.frame(ndvi_90, na.rm = T, xy = T) %>%
+  rename(y = "y", x = "x", value = "centro_ndvi")
 
+ndvi_inset <- ndvi %>%
+  crop(extent(99.8, 100.1, 13.15, 13.45))
+
+ndvi_inset_df <- as.data.frame(ndvi_inset, na.rm = T, xy = T) %>%
+  rename(y = "y", x = "x", value = "centro_ndvi")
 
 luc_plot <- ggplot() +
   #geom_raster(data = ndvi_210_df, aes(x = x, y = y, fill = value, alpha = value)) +
-  geom_raster(data = ndvi_150_df, aes(x = x, y = y, alpha = value, colour = "white")) +
+  geom_raster(data = ndvi_90_df, aes(x = x, y = y, alpha = value, colour = "white")) +
   #scale_fill_gradient(low = "white", high = "black") +
   geom_raster(data = luc_df, aes(x = x, y = y, fill = factor(value))) +
   scale_fill_manual(values = c("red", "green", "dark green")) +
@@ -271,7 +281,25 @@ luc_plot <- ggplot() +
         legend.position = "none")
       
 print(luc_plot)
+
+luc_inset <- ggplot() +
+  #geom_raster(data = ndvi_210_df, aes(x = x, y = y, fill = value, alpha = value)) +
+  geom_raster(data = ndvi_inset_df, aes(x = x, y = y, alpha = value, colour = "white")) +
+  #scale_fill_gradient(low = "white", high = "black") +
+  geom_raster(data = luc_df, aes(x = x, y = y, fill = factor(value))) +
+  scale_fill_manual(values = c("red", "green", "dark green")) +
+  theme_bw() +
+  coord_sf(xlim = c(99.85, 100.05), ylim = c(13.2, 13.4)) +
+  scale_y_continuous(breaks = seq(13.2, 13.4, 0.1)) +
+  scale_x_continuous(breaks = seq(99.85, 100.05, 0.1)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "none")
+
+luc_inset
+
   
+
 ggplot2::ggsave(luc_plot, device = "jpeg", 
                 filename = "./figs/draft_luc_plot_2.jpg", 
                 width = 10, height = 9, units = "in")
