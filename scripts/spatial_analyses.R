@@ -211,53 +211,40 @@ plot(simard)
 #--------------------------------------------------
 # Produce land use change map for central region (i.e., BKK)
 
+suppressMessages(library(grid))
 suppressMessages(library(ggmap))
 suppressMessages(library(rasterVis))
 suppressMessages(library(rnaturalearth))
 suppressMessages(library(rnaturalearthdata))
 
-thai1996 <- raster("./data/processed/GMW_1996_thai.tif")
-thai2016 <- raster("./data/processed/GMW_2016_thai.tif")
-gmw_luc <- raster("./data/processed/gmw_luc.tif")
+thai1996 <- raster("./data/processed/GMW_1996_thai.tif")   # value = 1
+thai2016 <- raster("./data/processed/GMW_2016_thai.tif")   # value = 2
+gmw_luc <- raster("./data/processed/gmw_luc.tif")          # loss = 1, gain = 2, no change = 3
 
 world <- ne_countries(scale = "medium", returnclass = "sf")
-
-#data <- stack(thai1996, thai2016)
-#luc <- sum(data, na.rm = T)
-
-#luc_list <- splitRaster(luc, nx = 2, ny = 2)
-
-#luc_df <- as.data.frame(gmw_luc, na.rm = T, xy = T)
-#luc_df <- luc_df %>%
-#  rename(value = "2", x = "x", y = "gmw_luc")
 
 e <- extent(99.5, 101.5, 12.8, 13.8)
 luc_centro <- crop(gmw_luc, e)
 
 luc_df <- as.data.frame(luc_centro, na.rm = T, xy = T) %>%
   rename(y = "gmw_luc", x = "x", value = "2") %>%
-  mutate(col = ifelse(value == 1, "red", 
-                      ifelse(value == 2, "blue", "green")))
+  mutate(col = ifelse(value == 1, "red", ifelse(value == 2, "blue", "green")))
 
-# myMap <- get_stamenmap(bbox = c(left = 99,
-#                                 bottom = 13,
-#                                 right = 101.5,
-#                                 top = 14),
-#                        maptype = "terrain", 
-#                        crop = FALSE,
-#                        zoom = 11)
+#e_min <- extent(99.8, 101.2, 12.9, 13.7)
 
 ndvi <- raster("./data/processed/centro_ndvi.tif") %>%
   crop(e)
 
-ndvi_150 <- aggregate(ndvi, fact = 5)
+ndvi_df <- as.data.frame(ndvi, na.rm = T, xy = T) 
+ndvi_df <- ndvi_df %>%
+  rename(value = "2", x = "x", y = "centro_ndvi")
 
-ndvi_90 <- aggregate(ndvi, fact = 3)
-
-ndvi_150_df <- as.data.frame(ndvi_150, na.rm = T, xy = T) %>%
+ndvi_60 <- aggregate(ndvi, fact = 2)
+ndvi_60_df <- as.data.frame(ndvi_90, na.rm = T, xy = T) %>%
   rename(y = "y", x = "x", value = "centro_ndvi")
 
-ndvi_90_df <- as.data.frame(ndvi_90, na.rm = T, xy = T) %>%
+ndvi_120 <- aggregate(ndvi, fact = 4)
+ndvi_120_df <- as.data.frame(ndvi_150, na.rm = T, xy = T) %>%
   rename(y = "y", x = "x", value = "centro_ndvi")
 
 ndvi_inset <- ndvi %>%
@@ -268,9 +255,10 @@ ndvi_inset_df <- as.data.frame(ndvi_inset, na.rm = T, xy = T) %>%
 
 luc_plot <- ggplot() +
   #geom_raster(data = ndvi_210_df, aes(x = x, y = y, fill = value, alpha = value)) +
-  geom_raster(data = ndvi_90_df, aes(x = x, y = y, alpha = value, colour = "white")) +
+  geom_raster(data = ndvi_df, aes(x = x, y = y, alpha = value, colour = value)) +
   #scale_fill_gradient(low = "white", high = "black") +
   geom_raster(data = luc_df, aes(x = x, y = y, fill = factor(value))) +
+  geom_rect(aes(xmin = 99.85, xmax = 100.05, ymin = 13.2, ymax = 13.4), color = "red", fill = "NA") +
   scale_fill_manual(values = c("red", "green", "dark green")) +
   theme_bw() +
   coord_sf(xlim = c(99.8, 101.2), ylim = c(12.9, 13.7)) +
@@ -295,17 +283,33 @@ luc_inset <- ggplot() +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank(),
         legend.position = "none")
-
-luc_inset
-
   
+#luc_inset
+
+luc_grob <- ggplotGrob(luc_plot)
+inset_grob <- ggplotGrob(luc_inset)
+
+panel <- gridExtra::arrangeGrob(inset_grob, luc_grob, ncol = 2, heights = c(1, 1))
+
+plot(panel)
 
 ggplot2::ggsave(luc_plot, device = "jpeg", 
                 filename = "./figs/draft_luc_plot_2.jpg", 
                 width = 10, height = 9, units = "in")
 
+
+ggplot2::ggsave(panel, device = "jpeg", 
+                filename = "./figs/draft_luc_plot_w_inset.jpg", 
+                width = 5, height = 9, units = "in")
+
+
+
+
 #-----------------------------
 # Next step for spatial analyses - what is it?
 
+loss <- gmw_luc[gmw_luc == 1]
+gain <- gmw_luc[gmw_luc == 2]
+static <- gmw_luc[gmw_luc == 3]
 
         
