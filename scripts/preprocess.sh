@@ -50,3 +50,15 @@ gdal_calc.py -A ./data/processed/GMW_1996_thai.tif -B ./data/processed/GMW_2016_
 
 gdal_translate -srs_nodata 0 -co COMPRESS=DEFLATE ./data/processed/luc.tif ./data/processed/gmw_luc.tif
 
+
+# Write out separate rasters for loss, gain, and no change in mangrove extent
+
+gdal_calc.py -A luc.tif --outfile=loss.tif --calc="1*(A==1)+0*(A==2)+0*(A==3)" --NoDataValue=0
+gdal_calc.py -A luc.tif --outfile=gain.tif --calc="1*(A==2)+0*(A==2)+0*(A==3)" --NoDataValue=0
+gdal_calc.py -A luc.tif --outfile=noChange.tif --calc="1*(A==3)+0*(A==2)+0*(A==3)" --NoDataValue=0
+
+# Rasterize the Chongwat polygons to try to run faster zonal stats
+
+cp ./data/scratch/empty.tif ./data/scratch/chongwats.tif
+
+gdal_rasterize -burn region -l chongwats ./data/processed/cstl_prvncs/regions.shp ./data/scratch/chongwats.tif

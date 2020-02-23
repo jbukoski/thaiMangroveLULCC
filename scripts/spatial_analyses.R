@@ -243,9 +243,9 @@ ndvi_60 <- aggregate(ndvi, fact = 2)
 ndvi_60_df <- as.data.frame(ndvi_90, na.rm = T, xy = T) %>%
   rename(y = "y", x = "x", value = "centro_ndvi")
 
-ndvi_120 <- aggregate(ndvi, fact = 4)
-ndvi_120_df <- as.data.frame(ndvi_150, na.rm = T, xy = T) %>%
-  rename(y = "y", x = "x", value = "centro_ndvi")
+# ndvi_120 <- aggregate(ndvi, fact = 4)
+# ndvi_120_df <- as.data.frame(ndvi_150, na.rm = T, xy = T) %>%
+#   rename(y = "y", x = "x", value = "centro_ndvi")
 
 ndvi_inset <- ndvi %>%
   crop(extent(99.8, 100.1, 13.15, 13.45))
@@ -254,9 +254,7 @@ ndvi_inset_df <- as.data.frame(ndvi_inset, na.rm = T, xy = T) %>%
   rename(y = "y", x = "x", value = "centro_ndvi")
 
 luc_plot <- ggplot() +
-  #geom_raster(data = ndvi_210_df, aes(x = x, y = y, fill = value, alpha = value)) +
-  geom_raster(data = ndvi_df, aes(x = x, y = y, alpha = value, colour = value)) +
-  #scale_fill_gradient(low = "white", high = "black") +
+  geom_raster(data = ndvi_60_df, aes(x = x, y = y, alpha = value, colour = value)) +
   geom_raster(data = luc_df, aes(x = x, y = y, fill = factor(value))) +
   geom_rect(aes(xmin = 99.85, xmax = 100.05, ymin = 13.2, ymax = 13.4), color = "red", fill = "NA") +
   scale_fill_manual(values = c("red", "green", "dark green")) +
@@ -271,9 +269,7 @@ luc_plot <- ggplot() +
 print(luc_plot)
 
 luc_inset <- ggplot() +
-  #geom_raster(data = ndvi_210_df, aes(x = x, y = y, fill = value, alpha = value)) +
   geom_raster(data = ndvi_inset_df, aes(x = x, y = y, alpha = value, colour = "white")) +
-  #scale_fill_gradient(low = "white", high = "black") +
   geom_raster(data = luc_df, aes(x = x, y = y, fill = factor(value))) +
   scale_fill_manual(values = c("red", "green", "dark green")) +
   theme_bw() +
@@ -289,10 +285,10 @@ luc_inset <- ggplot() +
 luc_grob <- ggplotGrob(luc_plot)
 inset_grob <- ggplotGrob(luc_inset)
 
-panel <- gridExtra::arrangeGrob(inset_grob, luc_grob, ncol = 2, heights = c(1, 1))
+panel <- gridExtra::arrangeGrob(inset_grob, luc_grob, nrow = 1, ncol = 2, widths = c(0.4, 0.67))
 
 plot(panel)
-
+  
 ggplot2::ggsave(luc_plot, device = "jpeg", 
                 filename = "./figs/draft_luc_plot_2.jpg", 
                 width = 10, height = 9, units = "in")
@@ -300,16 +296,57 @@ ggplot2::ggsave(luc_plot, device = "jpeg",
 
 ggplot2::ggsave(panel, device = "jpeg", 
                 filename = "./figs/draft_luc_plot_w_inset.jpg", 
-                width = 5, height = 9, units = "in")
+                width = 9, height = 5, units = "in")
 
 
-
+  
 
 #-----------------------------
 # Next step for spatial analyses - what is it?
+# Chongwat's coding
+# 1: Central
+# 2: Eastern
+# 3: Eastern Peninsula
+# 4: Western Peninsula
 
-loss <- gmw_luc[gmw_luc == 1]
-gain <- gmw_luc[gmw_luc == 2]
-static <- gmw_luc[gmw_luc == 3]
+library(raster)
+library(rgdal)
+library(sf)
+library(tidyverse)
+  
+loss <- raster("./data/processed/loss.tif")
+gain <- raster("./data/processed/gain.tif")
+same <- raster("./data/processed/noChange.tif")
+
+chongwats <- raster("~/Dropbox/manuscripts/ch2_luc/analysis/data/scratch/chongwats.tif")
+
+loss_nums <- zonal(loss, chongwats, fun="sum", na.rm=TRUE)
+gain_nums <- zonal(gain, chongwats, fun="sum", na.rm=TRUE)
+same_nums <- zonal(same, chongwats, fun="sum", na.rm=TRUE)
+
+zonal(thai1996, chongwats, fun = "sum", na.rm = TRUE)
+
+#---------------------------------------------------------------
+# Carbon summary
+
+library(tidyverse)
+library(raster)
+library(sp)
+
+chongwats <- raster("~/Dropbox/manuscripts/ch2_luc/analysis/data/scratch/chongwats.tif")
+agb <- raster("./data/raw/carbon/Mangrove_agb_Thailand.tif")
+soc <- raster("./data/raw/carbon/Mangrove_soc_Thailand.tif")
+
+cw_agb <- resample(chongwats, agb, "bilinear")
+cw_agb <- crop(cw_agb, extent(agb))
+    
+cw_soc <- resample(chongwats, soc, "bilinear")
+cw_soc <- crop(cw_soc, extent(soc))
+
+agb_mean <- zonal(agb, cw_agb, fun="mean", na.rm=TRUE)
+agb_sd <- zonal(agb, cw_agb, fun="sd", na.rm=TRUE)
+
+soc_mean <- zonal(soc, cw_soc, fun="mean", na.rm=TRUE)
+soc_sd <- zonal(soc, cw_soc, fun="sd", na.rm=TRUE)
 
         
