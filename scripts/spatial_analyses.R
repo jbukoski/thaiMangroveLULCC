@@ -349,4 +349,57 @@ agb_sd <- zonal(agb, cw_agb, fun="sd", na.rm=TRUE)
 soc_mean <- zonal(soc, cw_soc, fun="mean", na.rm=TRUE)
 soc_sd <- zonal(soc, cw_soc, fun="sd", na.rm=TRUE)
 
-        
+#--------------------------------------
+# Processing Thai LULC data
+
+library(tidyverse)
+library(sf)
+library(sp)
+library(raster)
+library(rgdal)
+
+lulc2000 <- read_sf("~/Documents/dmcr_data/Land use (2000 and 2014)/MG_TYPE_43.shp") %>%
+  dplyr::select(CODE)
+lulc2014 <- read_sf("~/Documents/dmcr_data/Land use (2000 and 2014)/MG_TYPE_57.shp") %>%
+  dplyr::select(CODE)
+thai <- read_sf("~/Dropbox/manuscripts/ch2_luc/analysis/data/raw/tha_admbnda_adm0_rtsd_20190221.shp") %>%
+  st_transform(st_crs(lulc2000))
+
+pts <- st_sample(lulc2000, 2500, type = "random", exact = TRUE)
+
+ptsData <- st_intersection(lulc2000, pts)
+
+ptsDataClip <- st_intersection(ptsData, thai)
+ptsDataClip <- dplyr::select(ptsDataClip, code = CODE)
+
+ptsDataClip$code_num <- as.numeric(as.factor(ptsDataClip$code))
+
+ptsData_sp <- as(ptsDataClip, "Spatial")
+
+
+writeOGR(ptsData_sp, "~/Documents/dmcr_data/", layer = "ptsData", driver = "ESRI Shapefile")
+
+library(randomForest)
+
+newDat <- read_sf("~/Documents/dmcr_data/drive-download-20200225T202914Z-001/exportedDataPoints.shp")
+
+st_geometry(newDat) <- NULL
+
+dat <- drop_na(newDat) %>%
+  mutate(code_num = as.factor(CODE),
+         idx = row_number()) %>%
+  filter(!(code_num %in% c(3, 4, 8))) %>%
+  dplyr::select(code_num, ndmi, mmri, mndwi, evi, diff, ndvi, ndwi, dtm, ndsi, idx)
+
+trnDat <- sample_n(dat, 1500) 
+
+valDat <- dat %>%
+  filter(!(idx %in% trnDat$idx))
+
+trnDat <- dplyr::select(trnDat, -idx)
+valDat <- dplyr::select(valDat, -idx)
+
+rf <- randomForest(code_num ~ ., data = trnDat)
+
+pred <- predict(rf, valDat)
+cm <- table(valDat$code_num, pred)

@@ -4,7 +4,7 @@ Datasets
 
   - 1996 and 2016 mangrove cover
   - Sanderman soil organic carbon
-  - Simard mangrove aboveground biomass
+  - Simard mangrove aboveground biomass 
       
 
   1. Pre-process datasets
