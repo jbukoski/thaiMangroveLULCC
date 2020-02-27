@@ -361,12 +361,12 @@ library(sp)
 library(raster)
 library(rgdal)
 
-# Load in datasets
+# Load in datasets  
 
 lulc2000 <- read_sf("~/Documents/dmcr_data/Land use (2000 and 2014)/MG_TYPE_43.shp") %>%
   dplyr::select(code = CODE) %>%
   mutate(code = ifelse(code %in% c("Mi"), "Unk", code))
-
+  
 lulc2014 <- read_sf("~/Documents/dmcr_data/Land use (2000 and 2014)/MG_TYPE_57_bffr.shp") %>%
   dplyr::select(code = CODE) %>%
   mutate(code = ifelse(code %in% c("S", "W"), "Unk", code))
