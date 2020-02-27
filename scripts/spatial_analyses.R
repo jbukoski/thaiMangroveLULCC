@@ -350,7 +350,10 @@ soc_mean <- zonal(soc, cw_soc, fun="mean", na.rm=TRUE)
 soc_sd <- zonal(soc, cw_soc, fun="sd", na.rm=TRUE)
 
 #--------------------------------------
-# Processing Thai LULC data
+# Processing DMCR Thai LULC dataset.
+# Outputs pts files with land cover attached, which is fed into GEE script for
+# supervised classification of land use in Thailand. Validated with 2014 coastal
+# land use dataset.
 
 library(tidyverse)
 library(sf)
@@ -358,35 +361,68 @@ library(sp)
 library(raster)
 library(rgdal)
 
+# Load in datasets
+
 lulc2000 <- read_sf("~/Documents/dmcr_data/Land use (2000 and 2014)/MG_TYPE_43.shp") %>%
-  dplyr::select(CODE)
-lulc2014 <- read_sf("~/Documents/dmcr_data/Land use (2000 and 2014)/MG_TYPE_57.shp") %>%
-  dplyr::select(CODE)
+  dplyr::select(code = CODE) %>%
+  mutate(code = ifelse(code %in% c("Mi"), "Unk", code))
+
+lulc2014 <- read_sf("~/Documents/dmcr_data/Land use (2000 and 2014)/MG_TYPE_57_bffr.shp") %>%
+  dplyr::select(code = CODE) %>%
+  mutate(code = ifelse(code %in% c("S", "W"), "Unk", code))
+
 thai <- read_sf("~/Dropbox/manuscripts/ch2_luc/analysis/data/raw/tha_admbnda_adm0_rtsd_20190221.shp") %>%
   st_transform(st_crs(lulc2000))
 
-pts <- st_sample(lulc2000, 2500, type = "random", exact = TRUE)
+# Processing pts data
 
-ptsData <- st_intersection(lulc2000, pts)
+pts2000 <- st_sample(lulc2000, 2500, type = "random", exact = TRUE)
+pts2014 <- st_sample(lulc2014, 2500, type = "random", exact = TRUE)
 
-ptsDataClip <- st_intersection(ptsData, thai)
-ptsDataClip <- dplyr::select(ptsDataClip, code = CODE)
+ptsData2000 <- st_intersection(lulc2000, pts2000) %>%
+  st_intersection(thai) %>%
+  mutate(code_num = as.numeric(as.factor(code))) %>%
+  dplyr::select(code, code_num)
 
-ptsDataClip$code_num <- as.numeric(as.factor(ptsDataClip$code))
+pts2000_df <- ptsData2000
+st_geometry(pts2000_df) <- NULL
 
-ptsData_sp <- as(ptsDataClip, "Spatial")
+ptsData2014 <- st_intersection(lulc2014, pts2014) %>%
+  st_intersection(thai) %>%
+  mutate(code_num = as.numeric(as.factor(code))) %>%
+  dplyr::select(code, code_num)
+
+pts2014_df <- ptsData2014
+st_geometry(pts2014_df) <- NULL
+
+pts2000_df %>%
+  unique() %>%
+  arrange(code_num)
+
+pts2014_df %>%
+  unique() %>%
+  arrange(code_num)
+  
+# Write out shapefiles
+
+st_write(ptsData2000, "~/Documents/dmcr_data/pts2000", layer = "ptsData_2000", driver = "ESRI Shapefile")
+st_write(ptsData2014, "~/Documents/dmcr_data/pts2014", layer = "ptsData_2014", driver = "ESRI Shapefile")
 
 
-writeOGR(ptsData_sp, "~/Documents/dmcr_data/", layer = "ptsData", driver = "ESRI Shapefile")
+
 
 library(randomForest)
 
-newDat <- read_sf("~/Documents/dmcr_data/drive-download-20200225T202914Z-001/exportedDataPoints.shp")
+newDat <- read_sf("~/Documents/dmcr_data/drive-download-20200226T232913Z-001/exported2014points.shp")
+
+newDat <- newDat %>%
+  rename(orig = code_num,
+         pred = first)
 
 st_geometry(newDat) <- NULL
 
 dat <- drop_na(newDat) %>%
-  mutate(code_num = as.factor(CODE),
+  mutate(code_num = as.factor(code),
          idx = row_number()) %>%
   filter(!(code_num %in% c(3, 4, 8))) %>%
   dplyr::select(code_num, ndmi, mmri, mndwi, evi, diff, ndvi, ndwi, dtm, ndsi, idx)
@@ -402,4 +438,5 @@ valDat <- dplyr::select(valDat, -idx)
 rf <- randomForest(code_num ~ ., data = trnDat)
 
 pred <- predict(rf, valDat)
-cm <- table(valDat$code_num, pred)
+
+cm <- table(newDat$orig, newDat$pred)
