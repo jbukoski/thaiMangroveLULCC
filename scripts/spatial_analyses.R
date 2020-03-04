@@ -408,9 +408,6 @@ pts2014_df %>%
 st_write(ptsData2000, "~/Documents/dmcr_data/pts2000", layer = "ptsData_2000", driver = "ESRI Shapefile")
 st_write(ptsData2014, "~/Documents/dmcr_data/pts2014", layer = "ptsData_2014", driver = "ESRI Shapefile")
 
-
-
-
 library(randomForest)
 
 newDat <- read_sf("~/Documents/dmcr_data/drive-download-20200226T232913Z-001/exported2014points.shp")
@@ -440,3 +437,8 @@ rf <- randomForest(code_num ~ ., data = trnDat)
 pred <- predict(rf, valDat)
 
 cm <- table(newDat$orig, newDat$pred)
+
+#------------------------------------------------------
+# Analysis of zonal areas
+# Analysis of difference in land cover type
+
