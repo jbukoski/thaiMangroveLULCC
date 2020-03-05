@@ -7,7 +7,7 @@ ogr2ogr -t_srs EPSG:4326 mg2014_4326.shp MY_TYPE_57.shp
 
 # Use R to reclass several unknown or uncommon land cover classes.
 # Purpose is to facilitate land cover change.
-
+  
 R --vanilla --no-readline -q  << 'EOF'
 
 library(sf)

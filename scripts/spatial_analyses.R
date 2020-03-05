@@ -442,18 +442,18 @@ cm <- table(newDat$orig, newDat$pred)
 # Analysis of zonal areas
 # Analysis of difference in land cover type
 
+library(raster)
 library(rgdal)
 library(sf)
 library(sp)
 library(tidyverse)
 
-lulc2000 <- read_sf("~/Documents/dmcr_data/Land use (2000 and 2014)/MG_TYPE_43.shp") %>%
-  dplyr::select(code = CODE) %>%
-  mutate(code = ifelse(code %in% c("Mi"), "Unk", code))
+lulc2000 <- raster("~/Documents/dmcr_data/Land use (2000 and 2014)/mg2000.tif")
+lulc2014 <- raster("~/Documents/dmcr_data/Land use (2000 and 2014)/mg2014.tif")
 
-lulc2014 <- read_sf("~/Documents/dmcr_data/Land use (2000 and 2014)/MG_TYPE_57_bffr.shp") %>%
-  dplyr::select(code = CODE) %>%
-  mutate(code = ifelse(code %in% c("S", "W"), "Unk", code))
+lulcc <- crosstab(lulc2000, lulc2014, useNA=FALSE)
 
-lulcc <- st_intersection(lulc2000, lulc2014)
+write_csv(lulcc, "~/Desktop/lulcc.csv")
+
+
 
