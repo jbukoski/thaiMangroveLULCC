@@ -36,7 +36,7 @@ Analysis steps:
 
 #### Land use and land cover change analysis
 
-Datasets:
+Datasets: 
 
   - **Script**: 
   - **Input datasets**: lulc2000.tif, lulc2014.tif
