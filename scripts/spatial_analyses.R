@@ -455,5 +455,8 @@ lulcc <- crosstab(lulc2000, lulc2014, useNA=FALSE)
 
 write_csv(lulcc, "~/Desktop/lulcc.csv")
 
+lulcc_rast <- lulc2000 + lulc2014*100
+
+writeRaster(lulcc_rast, "~/Documents/dmcr_data/Land use (2000 and 2014)/lulcc.tif", format = "GTiff", options="COMPRESS=DEFLATE")
 
 
