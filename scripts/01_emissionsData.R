@@ -10,13 +10,13 @@
 #  - the Palian River Estuary, and
 #  - the Pak Panang Mangrove 
 # 
-# This script generates site wide estimates of carbon stocks and
+# This script generates site wide estimates of carbon stocks   and
 # soil parameters for each of the three sites.
 
 # Inputs:
 #  1. Excel file containing field data
 
-# Outputs
+# Outputs 
 #  2. CSV files of processed data
 
 
