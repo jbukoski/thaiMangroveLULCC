@@ -6,12 +6,12 @@
 
 # Imports plotwise field data for three sites from Thailand:
 #
-#  - the Krabi River Estuary,
+#  - the Krabi River Estuary,   
 #  - the Palian River Estuary, and
 #  - the Pak Panang Mangrove 
 # 
 # This script generates site wide estimates of carbon stocks   and
-# soil parameters for each of the three sites.
+# soil parameters for each of the three sites.  
 
 # Inputs:
 #  1. Excel file containing field data
