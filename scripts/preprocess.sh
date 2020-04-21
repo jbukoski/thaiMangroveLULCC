@@ -7,7 +7,7 @@
 # Import to R and run the following
 # 3. Use raster:intersect() in R to clip mangrove extents by chongwat
 # 4. Convert to equal area projection
-# 5. Calculate area of each polygon
+# 5. Calculate area of each polygon 
 # 6. Save for visualization and export
 
 # Convert vector files to rasters for analyses and plotting
