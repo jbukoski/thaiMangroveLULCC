@@ -35,7 +35,7 @@ EOF
 ogr2ogr -dialect sqlite -sql "SELECT CODE_NUM, ST_BUFFER(geometry, 0.000001) FROM mg2000_edited" mg2000.shp mg2000_edited.shp
 ogr2ogr -dialect sqlite -sql "SELECT CODE_NUM, ST_BUFFER(geometry, 0.000001) FROM mg2014_edited" mg2014.shp mg2014_edited.shp
 
-gdal_rasterize -a CODE_NUM -l mg2000 mg2000.shp lulc2000.tif
+gdal_rasterize -a code_num -l mg2000 ./data/processed/shapefiles/mg2000.shp ./data/scratch/blank.tif ./data/processed/rasters/lulc2000.tif
 gdal_rasterize -a CODE_NUM -l mg2014 mg2014.shp lulc2014.tif
 
 rm *_edited.* *_4326.*

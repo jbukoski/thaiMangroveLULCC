@@ -111,6 +111,9 @@ cngwt_union <- st_union(cngwt) %>%
 cngwt_bffr <- st_buffer(cngwt_union, 5000) %>%
   st_transform(crs = epsg4326)
 
+adm0 <- read_sf("./data/raw/tha_admbnda_adm0_rtsd_20190221.shp")
+sea_adm0 <- read_sf("./data/raw/se_asia.shp")
+
 # Geomorphology data
 
 tsm <- raster("../../ch1_c_estimation/analysis/data/raw/site_map/tha_mean_tsm.tif")
@@ -146,17 +149,12 @@ fviz_nbclust(na.omit(gmrph_dat[, c(2,3)]), kmeans, method = 'wss', k.max = 25, n
 fviz_nbclust(na.omit(gmrph_dat[, c(2,3)]), kmeans, method = 'silhouette', k.max = 25, nstart = 30)
 
 plot(optClstrs)
-    
-# Identify optimal number with the silhouette method    
-
-  
-
 
 # Classify coastline based on optimal number of clusters
 
 idx <- na.omit(gmrph_dat[ , c(1, 2, 3)])
 
-kmeansClass <- kmeans(na.omit(gmrph_dat[ , c(2, 3)]), 3, nstart = 30)
+kmeansClass <- kmeans(na.omit(gmrph_dat[ , c(2, 3)]), 4, nstart = 30)
 
 idx <- cbind(idx, kmeansClass$cluster)
 
@@ -184,29 +182,75 @@ values(classes) <- vals
 classesCrpd <- crop(classes, as(cngwt_bffr, "Spatial"))
 classesMskd <- mask(classesCrpd, as(cngwt_bffr, "Spatial"))
 
-plot(classesMskd)
+classesMskd_df <- as.data.frame(classesMskd, xy = T, na.rm = T)
+
+ggplot(sea_adm0) +
+  geom_sf(fill = "#F2F2F2") +
+  geom_sf(data = adm0, aes(geometry = geometry), fill = "#E5E5E5") +
+  geom_raster(data = classesMskd_df, aes(x = x, y = y, fill = factor(tha_mean_tsm))) +
+  theme_bw() +
+  xlab("") +
+  ylab("") +
+  labs(fill = "Cluster") +
+  xlim(c(98, 105)) +
+  ylim(c(5, 15)) +
+  ggtitle("no. clusters = 4") +
+  theme(legend.position = "bottom")
 
 
 # Stratify height data
 
+library(BAMMtools)   # For Jenks Breaks
+
 simard_agb <- raster("../../ch1_c_estimation/analysis/data/raw/modeled_datasets/Mangrove_agb_Thailand.tif")
 simard_height <- raster("~/Desktop/mangrove_c_model_data/CMS_Global_Map_Mangrove_Canopy_1665/data/Mangrove_hmax95_Thailand.tif")
 
-set.seed(04029189)
-dat <- sampleRandom(simard_height, 50000, na.rm=T)
+hgt_resample <- raster(nrow = 28062/3, ncol = 20575/3, crs = epsg4326, ext = extent(simard_height))
+
+simard_height_rsmpl <- resample(simard_height, hgt_resample, method = "bilinear")
 
 
 # For height
 m_hgt <- c(0.5, 8.5, 1, 8.5, 15.3, 2, 15.3, 22.1, 3)
 rclmat_hgt <- matrix(m_hgt, ncol = 3, byrow = T)
-rc <- reclassify()
+rc <- reclassify(simard_height, rclmat_hgt)
 
 # For biomass
 m <- c(57, 99, 1, 99, 139, 2, 139, 185, 3)
 rclmat <- matrix(m, ncol = 3, byrow = T)
 rc <- reclassify(simard_agb, rclmat)
 
-plot(simard)
+simard_height_df_rs <- as.data.frame(simard_height_rsmpl, xy = T, na.rm = T)
+colnames(simard_height_df_rs) <- c("hgt", "x", "y")
+
+simard_height_df <- as.data.frame(simard_height, xy = T, na.rm = T)
+colnames(simard_height_df) <- c("hgt", "x", "y")
+
+getJenksBreaks(simard_height_df$hgt, 5)
+
+#0.8485  6.7880 11.8790 16.9700 22.0610
+
+ggplot(simard_height_df, aes(hgt)) +
+  geom_histogram(bins = 20) +
+  theme_bw() +
+  xlab("Mean mangrove canopy height, 30 x 30 m (m)") +
+  ylab("Count")
+
+ggplot(sea_adm0) +
+  geom_sf(fill = "#F2F2F2") +
+  geom_sf(data = adm0, aes(geometry = geometry), fill = "#E5E5E5") +
+  geom_raster(data = simard_height_df, aes(x = x, y = y, fill = hgt)) +
+  theme_bw() +
+  xlab("") +
+  ylab("") +
+  labs(fill = "Cluster") +
+  #coord_sf(xlim = c(99.85, 100.05), ylim = c(13.2, 13.4)) +
+  xlim(c(99.85, 100.05)) +
+  ylim(c(13.2, 13.4)) +
+  ggtitle("no. clusters = 4") +
+  theme(legend.position = "bottom")
+
+
 
 #--------------------------------------------------
 # Produce land use change map for central region (i.e., BKK)
@@ -448,10 +492,16 @@ library(sf)
 library(sp)
 library(tidyverse)
 
-lulc2000 <- raster("~/Documents/dmcr_data/Land use (2000 and 2014)/mg2000.tif")
-lulc2014 <- raster("~/Documents/dmcr_data/Land use (2000 and 2014)/mg2014.tif")
+lulc2000 <- raster("~/Documents/dmcr_data/Land use (2000 and 2014)/lulc2000.tif")
+lulc2014 <- raster("~/Documents/dmcr_data/Land use (2000 and 2014)/lulc2014.tif")
 
 lulcc <- crosstab(lulc2000, lulc2014, useNA=FALSE)
+
+lulcc_df <- as.data.frame.matrix(round(lulcc * 900 / 10000 / 1000, 2))
+
+lulcc_df$sum <- rowSums(lulcc_df)
+  lulcc_df[13, ] <- colSums(lulcc_df)
+
 
 write_csv(lulcc, "~/Desktop/lulcc.csv")
 
@@ -459,4 +509,8 @@ lulcc_rast <- lulc2000 + lulc2014*100
 
 writeRaster(lulcc_rast, "~/Documents/dmcr_data/Land use (2000 and 2014)/lulcc.tif", format = "GTiff", options="COMPRESS=DEFLATE")
 
-
+sf_dat <- read_sf("~/Documents/dmcr_data/Land use (2000 and 2014)/MG_TYPE_43.shp") %>%
+  mutate(CODE = ifelse(CODE == "Mi", "Unk", CODE)) %>%
+  arrange(CODE) %>%
+  mutate(CODE_NUM = 1:length(CODE)) %>%
+  dplyr::select(CODE, CODE_NUM)
