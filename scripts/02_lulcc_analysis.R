@@ -149,12 +149,20 @@ gains_total <- gains %>%
 
 prvnc_gains <- bind_rows(gains, gains_total)
 
-# Calculates areas
-
-# Cell size
+# Calculate areas for mangrove gains and losses for each province 
+# Reproject to Albers projection then extract pixel size
 
 epsg102028 <- CRS("+proj=aea +lat_1=7 +lat_2=-32 +lat_0=-15 +lon_0=125 
                   +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs")
 
 mg2014_102028 <- projectRaster(mg2014, crs=epsg102028)
+pxlSize <- xres(mg2014_102028) * yres(mg2014_102028)
+
+
+prvnc_losses_ha <- prvnc_losses
+prvnc_losses_ha[, 4:14] <- round(prvnc_losses[, 4:14] * pxlSize / 10000, 2)
+
+prvnc_gains_ha <- prvnc_gains
+prvnc_gains_ha[, 4:13] <- round(prvnc_gains[, 4:13] * pxlSize / 10000, 2)
+  
 

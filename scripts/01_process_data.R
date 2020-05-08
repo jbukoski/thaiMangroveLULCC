@@ -11,7 +11,7 @@ print("Begin Step 1. processing of raw data...")
 
 #----------------------
 
-in_dir <- "./data/raw/"
+raw_dir <- "./data/raw/"
 out_dir <- "./data/processed/"
 
 #-----------------------------------
@@ -102,6 +102,25 @@ st_write(mg2014_albers, paste0(out_dir, "shapefiles/mg2014_102028.shp"), append 
 # The outputs of the file are four rasters that exactly align: SOC, AGB, 2000 LULC, & 2014 LULC
 
 source("./scripts/resample_raster.sh")
+
+#---------------------------------
+
+####################################
+## Extract districts w/ mangroves ##
+####################################
+
+
+districts <- st_read(paste0(raw_dir, "shapefiles/tha_admbnda_adm2_rtsd_20190221.shp"))
+mg2000 <- st_transform(st_read(paste0(in_dir, "shapefiles/MG_TYPE_43.shp")), 4326)
+
+intersections <- st_intersects(districts, mg2000)
+districts_mg <- districts[lengths(intersections) > 0, ]
+
+plot(districts_mg["ADM1_EN"])
+plot(mg2000["CODE"], add = T)
+
+st_write(districts_mg, dsn = paste0(out_dir, "districts_c"), layer = "districts_c", driver = "ESRI Shapefile")
+
 
 #-----------------------------
 # Courtesy clean-up.
