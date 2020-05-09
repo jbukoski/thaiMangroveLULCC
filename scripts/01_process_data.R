@@ -119,7 +119,7 @@ districts_mg <- districts[lengths(intersections) > 0, ]
 plot(districts_mg["ADM1_EN"])
 plot(mg2000["CODE"], add = T)
 
-st_write(districts_mg, dsn = paste0(out_dir, "districts_c"), layer = "districts_c", driver = "ESRI Shapefile")
+st_write(districts_mg, dsn = paste0(out_dir, "shapefiles/districts_mg"), layer = "districts_mg", driver = "ESRI Shapefile")
 
 
 #-----------------------------

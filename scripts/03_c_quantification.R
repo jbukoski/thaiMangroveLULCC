@@ -54,65 +54,113 @@ scratch_dir <- "./data/scratch/"
 # SOC data - k-means clustering analysis
 # Load in necessary data
 
-chngwts <- read_sf(paste0(in_dir, "cstl_prvncs/cstl_prvncs.shp"))
+#chngwts <- read_sf(paste0(in_dir, "cstl_prvncs/cstl_prvncs.shp"))
+dstrcts <- read_sf(paste0(in_dir, "shapefiles/districts_mg/districts_mg.shp"))
 soc <- raster(paste0(raw_dir, "rasters/Mangrove_soc_Thailand.tif"))
 agb <- raster(paste0(raw_dir, "rasters/Mangrove_agb_Thailand.tif"))
 
 #--------------------------------
-# Derive average soc and biomass values for each chongwat
+# Derive average soc and biomass values for each district
 
-# Or should it be median values?
+dstrcts$ADM2_ID <- 1:nrow(dstrcts)
+dstrcts <- dplyr::select(dstrcts, ADM1_EN, ADM2_EN, ADM2_ID, geometry)
+dstrcts_sp <- as(dstrcts, "Spatial")
 
-chngwts$ADM1_ID <- 1:nrow(chngwts)
-chngwts <- dplyr::select(chngwts, ADM1_EN, ADM1_ID, geometry)
-chngwts_sp <- as(chngwts, "Spatial")
+dstrct_avgs <- data.frame("ADM2_ID" = 1:nrow(dstrcts_sp), 
+                          "SOC_AVG" = NA, "SOC_SD" = NA,
+                          "AGB_AVG" = NA, "AGB_SD" = NA)
 
-soc_empty <- raster(nrows=32000, ncols=24000)
-extent(soc_empty) <- extent(soc)
-projection(soc_empty) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-values(soc_empty) <- NA
-
-chngwt_avgs <- data.frame("ADM1_ID" = 1:nrow(chngwts_sp), 
-                      "SOC_AVG" = NA, "SOC_SD" = NA,
-                      "AGB_AVG" = NA, "AGB_SD" = NA)
-
-for(i in 1:nrow(chngwts_sp)) {
+for(i in 1:nrow(dstrcts_sp)) {
   
-  shp <- chngwts_sp[i, ]
-  chngwt <- shp$ADM1_EN
+  shp <- dstrcts_sp[i, ]
   
   soc_crop <- crop(soc, shp)
   soc_dat <- raster::extract(soc_crop, shp, df = T)
-  chngwt_avgs$SOC_AVG[i] <- mean(soc_dat$Mangrove_soc_Thailand, na.rm = T)
-  chngwt_avgs$SOC_SD[i] <- sd(soc_dat$Mangrove_soc_Thailand, na.rm = T)
+  dstrct_avgs$SOC_AVG[i] <- mean(soc_dat$Mangrove_soc_Thailand, na.rm = T)
+  dstrct_avgs$SOC_SD[i] <- sd(soc_dat$Mangrove_soc_Thailand, na.rm = T)
   
   rm(soc_dat, soc_crop)
   gc()
-
+  
 }
 
-for(i in 1:nrow(chngwts_sp)) {
+for(i in 1:nrow(dstrcts_sp)) {
   
-  shp <- chngwts_sp[i, ]
-  chngwt <- shp$ADM1_EN
-
+  shp <- dstrcts_sp[i, ]
+  
   agb_crop <- crop(agb, shp)
   agb_dat <- raster::extract(agb_crop, shp, df = T)
-  chngwt_avgs$AGB_AVG[i] <- mean(agb_dat$Mangrove_agb_Thailand, na.rm = T)
-  chngwt_avgs$AGB_SD[i] <- sd(agb_dat$Mangrove_agb_Thailand, na.rm = T)
-
+  dstrct_avgs$AGB_AVG[i] <- mean(agb_dat$Mangrove_agb_Thailand, na.rm = T)
+  dstrct_avgs$AGB_SD[i] <- sd(agb_dat$Mangrove_agb_Thailand, na.rm = T)
+  
   rm(agb_crop, agb_dat)
   gc()
   
 }
 
-chngwts_c <- chngwts_sp %>% 
+dstrcts_c <- dstrcts_sp %>% 
   st_as_sf() %>%
-  left_join(chngwt_avgs, by = "ADM1_ID")
+  left_join(dstrct_avgs, by = "ADM2_ID") %>%
+  arrange(ADM1_EN, ADM2_EN) %>%
+  #filter(row_number() > 20 & row_number() < 40) %>%
+  group_by(ADM1_EN) %>%
+  mutate(SOC_AVG = ifelse(is.nan(SOC_AVG), mean(SOC_AVG, na.rm = T), SOC_AVG),
+         SOC_SD = ifelse(is.na(SOC_SD), sqrt(sum(SOC_SD^2, na.rm = T)), SOC_SD),
+         AGB_AVG = ifelse(is.nan(AGB_AVG), mean(AGB_AVG, na.rm = T), AGB_AVG),
+         AGB_SD = ifelse(is.na(AGB_SD), sqrt(sum(AGB_SD^2, na.rm = T)), AGB_SD))
 
-st_write(chngwts_c, dsn = paste0(in_dir, "chngwts_c"), driver="ESRI Shapefile")
+plot(dstrcts_c["AGB_AVG"])
 
-rm(chngwts_sp, agb, soc, shp)
+st_write(dstrcts_c, dsn = paste0(in_dir, "shapefiles/dstrcts_c"), layer = "dstrcts_c", driver = "ESRI Shapefile")
+
+#--------------------------------
+# Derive average soc and biomass values for each province
+
+# chngwts$ADM1_ID <- 1:nrow(chngwts)
+# chngwts <- dplyr::select(chngwts, ADM1_EN, ADM1_ID, geometry)
+# chngwts_sp <- as(chngwts, "Spatial")
+# 
+# chngwt_avgs <- data.frame("ADM1_ID" = 1:nrow(chngwts_sp), 
+#                       "SOC_AVG" = NA, "SOC_SD" = NA,
+#                       "AGB_AVG" = NA, "AGB_SD" = NA)
+# 
+# for(i in 1:nrow(chngwts_sp)) {
+#   
+#   shp <- chngwts_sp[i, ]
+#   chngwt <- shp$ADM1_EN
+#   
+#   soc_crop <- crop(soc, shp)
+#   soc_dat <- raster::extract(soc_crop, shp, df = T)
+#   chngwt_avgs$SOC_AVG[i] <- mean(soc_dat$Mangrove_soc_Thailand, na.rm = T)
+#   chngwt_avgs$SOC_SD[i] <- sd(soc_dat$Mangrove_soc_Thailand, na.rm = T)
+#   
+#   rm(soc_dat, soc_crop)
+#   gc()
+# 
+# }
+# 
+# for(i in 1:nrow(chngwts_sp)) {
+#   
+#   shp <- chngwts_sp[i, ]
+#   chngwt <- shp$ADM1_EN
+# 
+#   agb_crop <- crop(agb, shp)
+#   agb_dat <- raster::extract(agb_crop, shp, df = T)
+#   chngwt_avgs$AGB_AVG[i] <- mean(agb_dat$Mangrove_agb_Thailand, na.rm = T)
+#   chngwt_avgs$AGB_SD[i] <- sd(agb_dat$Mangrove_agb_Thailand, na.rm = T)
+# 
+#   rm(agb_crop, agb_dat)
+#   gc()
+#   
+# }
+# 
+# chngwts_c <- chngwts_sp %>% 
+#   st_as_sf() %>%
+#   left_join(chngwt_avgs, by = "ADM1_ID")
+# 
+# st_write(chngwts_c, dsn = paste0(in_dir, "chngwts_c"), driver="ESRI Shapefile")
+# 
+# rm(chngwts_sp, agb, soc, shp)
 
 #-------------------------------------------
 # Intersect the provinces C data with historic mangrove extent
