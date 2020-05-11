@@ -286,7 +286,7 @@ dstrct_ttls_2014 <- bind_rows(losses_14, losses_ttl_14) %>%
   ungroup()
 
 # Convert to an SF object and clean up.
-
+  
 dstrct_ttls_2000_sf <- dstrcts %>%
   left_join(dstrct_ttls_2000, by = c("ADM1_EN", "ADM2_ID", "ADM2_EN")) %>%
   arrange(ADM1_EN, ADM2_EN) %>%

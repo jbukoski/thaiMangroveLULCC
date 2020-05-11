@@ -107,7 +107,9 @@ dstrcts_c <- dstrcts_sp %>%
   mutate(SOC_AVG = ifelse(is.nan(SOC_AVG), mean(SOC_AVG, na.rm = T), SOC_AVG),
          SOC_SD = ifelse(is.na(SOC_SD), sqrt(sum(SOC_SD^2, na.rm = T)), SOC_SD),
          AGB_AVG = ifelse(is.nan(AGB_AVG), mean(AGB_AVG, na.rm = T), AGB_AVG),
-         AGB_SD = ifelse(is.na(AGB_SD), sqrt(sum(AGB_SD^2, na.rm = T)), AGB_SD))
+         AGB_SD = ifelse(is.na(AGB_SD), sqrt(sum(AGB_SD^2, na.rm = T)), AGB_SD),
+         ECO_AVG = sum(AGB_AVG, SOC_AVG),
+         ECO_SD = sqrt(sum(AGB_SD^2, SOC_SD^2)))
 
 plot(dstrcts_c["AGB_AVG"])
 
