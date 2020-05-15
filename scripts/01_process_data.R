@@ -10,7 +10,7 @@
 print("Begin Step 1. processing of raw data...")
 
 #----------------------
-
+    
 raw_dir <- "./data/raw/"
 out_dir <- "./data/processed/"
 

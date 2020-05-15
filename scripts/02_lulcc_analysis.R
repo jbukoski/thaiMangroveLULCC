@@ -39,6 +39,14 @@ mg2014 <- raster(paste0(proc_dir, "rasters/mg2014.tif"))
 ct <- crosstab(mg2000, mg2014, useNA = T)
 ct_df <- as.data.frame.matrix(ct)
 
+# Compute numbers in thousands of hectares
+
+ct_df_ha <- ct_df * 937 / 10000 / 1000
+ct_df_ha$ttl <- rowSums(ct_df_ha)
+ct_df_ha <- rbind(ct_df_ha, colSums(ct_df_ha))
+
+
+#-----------------------------
 # Cross-tabling of rasterized DMCR data at the province scale
 
 dstrcts <- read_sf(paste0(proc_dir, "shapefiles/districts_mg/districts_mg.shp")) %>%
