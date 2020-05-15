@@ -15,8 +15,7 @@
 #     b. Examine height data - how best to do this?
 #  3. Summarize data by chongwat
 #  4. Map average values onto map
-#     a. By ecological zone
-#     b. By chongwat
+#     a. By chongwat
 
 #-----------------------------------
 
@@ -40,9 +39,8 @@ library(tidyverse)
 # define directories
 
 raw_dir <- "./data/raw/"
-in_dir <- "./data/processed/"
+proc_dir <- "./data/processed/"
 scratch_dir <- "./data/scratch/"
-#out_dir <- "./data/processed/"
 
 #--------------------------------
 
@@ -54,8 +52,7 @@ scratch_dir <- "./data/scratch/"
 # SOC data - k-means clustering analysis
 # Load in necessary data
 
-#chngwts <- read_sf(paste0(in_dir, "cstl_prvncs/cstl_prvncs.shp"))
-dstrcts <- read_sf(paste0(in_dir, "shapefiles/districts_mg/districts_mg.shp"))
+dstrcts <- read_sf(paste0(proc_dir, "shapefiles/districts_mg/districts_mg.shp"))
 soc <- raster(paste0(raw_dir, "rasters/Mangrove_soc_Thailand.tif"))
 agb <- raster(paste0(raw_dir, "rasters/Mangrove_agb_Thailand.tif"))
 
@@ -102,67 +99,82 @@ dstrcts_c <- dstrcts_sp %>%
   st_as_sf() %>%
   left_join(dstrct_avgs, by = "ADM2_ID") %>%
   arrange(ADM1_EN, ADM2_EN) %>%
-  #filter(row_number() > 20 & row_number() < 40) %>%
   group_by(ADM1_EN) %>%
   mutate(SOC_AVG = ifelse(is.nan(SOC_AVG), mean(SOC_AVG, na.rm = T), SOC_AVG),
          SOC_SD = ifelse(is.na(SOC_SD), sqrt(sum(SOC_SD^2, na.rm = T)), SOC_SD),
          AGB_AVG = ifelse(is.nan(AGB_AVG), mean(AGB_AVG, na.rm = T), AGB_AVG),
-         AGB_SD = ifelse(is.na(AGB_SD), sqrt(sum(AGB_SD^2, na.rm = T)), AGB_SD),
-         ECO_AVG = sum(AGB_AVG, SOC_AVG),
-         ECO_SD = sqrt(sum(AGB_SD^2, SOC_SD^2)))
+         AGB_SD = ifelse(is.na(AGB_SD), sqrt(sum(AGB_SD^2, na.rm = T)), AGB_SD)) %>%
+  ungroup() %>%
+  rowwise() %>%
+  mutate(ECO_AVG = sum(AGB_AVG, SOC_AVG),
+         ECO_SD = sqrt(sum(AGB_SD^2, SOC_SD^2))) %>%
+  ungroup() %>%
+  st_as_sf() %>%
+  dplyr::select(ADM1_EN, ADM2_EN, ADM2_ID, AGB_AVG, AGB_SD, SOC_AVG, SOC_SD,
+                ECO_AVG, ECO_SD, geometry)
 
-plot(dstrcts_c["AGB_AVG"])
+st_write(dstrcts_c, dsn = paste0(proc_dir, "shapefiles/dstrcts_c"), layer = "dstrcts_c", driver = "ESRI Shapefile")
 
-st_write(dstrcts_c, dsn = paste0(in_dir, "shapefiles/dstrcts_c"), layer = "dstrcts_c", driver = "ESRI Shapefile")
+rm(list = ls())
 
-#--------------------------------
-# Derive average soc and biomass values for each province
+#--------------
+# Intersect the districts C data with historic mangrove extent
 
-# chngwts$ADM1_ID <- 1:nrow(chngwts)
-# chngwts <- dplyr::select(chngwts, ADM1_EN, ADM1_ID, geometry)
-# chngwts_sp <- as(chngwts, "Spatial")
-# 
-# chngwt_avgs <- data.frame("ADM1_ID" = 1:nrow(chngwts_sp), 
-#                       "SOC_AVG" = NA, "SOC_SD" = NA,
-#                       "AGB_AVG" = NA, "AGB_SD" = NA)
-# 
-# for(i in 1:nrow(chngwts_sp)) {
-#   
-#   shp <- chngwts_sp[i, ]
-#   chngwt <- shp$ADM1_EN
-#   
-#   soc_crop <- crop(soc, shp)
-#   soc_dat <- raster::extract(soc_crop, shp, df = T)
-#   chngwt_avgs$SOC_AVG[i] <- mean(soc_dat$Mangrove_soc_Thailand, na.rm = T)
-#   chngwt_avgs$SOC_SD[i] <- sd(soc_dat$Mangrove_soc_Thailand, na.rm = T)
-#   
-#   rm(soc_dat, soc_crop)
-#   gc()
-# 
-# }
-# 
-# for(i in 1:nrow(chngwts_sp)) {
-#   
-#   shp <- chngwts_sp[i, ]
-#   chngwt <- shp$ADM1_EN
-# 
-#   agb_crop <- crop(agb, shp)
-#   agb_dat <- raster::extract(agb_crop, shp, df = T)
-#   chngwt_avgs$AGB_AVG[i] <- mean(agb_dat$Mangrove_agb_Thailand, na.rm = T)
-#   chngwt_avgs$AGB_SD[i] <- sd(agb_dat$Mangrove_agb_Thailand, na.rm = T)
-# 
-#   rm(agb_crop, agb_dat)
-#   gc()
-#   
-# }
-# 
-# chngwts_c <- chngwts_sp %>% 
-#   st_as_sf() %>%
-#   left_join(chngwt_avgs, by = "ADM1_ID")
-# 
-# st_write(chngwts_c, dsn = paste0(in_dir, "chngwts_c"), driver="ESRI Shapefile")
-# 
-# rm(chngwts_sp, agb, soc, shp)
+dstrcts_c_df <- st_read(paste0(proc_dir, "shapefiles/dstrcts_c/")) %>%
+  st_set_geometry(NULL)
+
+mg2000 <- st_read(paste0(proc_dir, "shapefiles/dstrct_ttls_2000"))
+mg2014_ls <- st_read(paste0(proc_dir, "shapefiles/dstrct_losses_2014"))
+mg2014_gn <- st_read(paste0(proc_dir, "shapefiles/dstrct_gains_2014"))
+
+mg2000_c <- mg2000 %>%
+  left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID")) %>%
+  mutate(aqua_c_ls = aqucltr * ECO_AVG,
+         agri_c_ls = agrcltr * ECO_AVG,
+         mine_c_ls = mines * ECO_AVG,
+         abnd_c_ls = abandnd * ECO_AVG,
+         salt_c_ls = slt_frm * ECO_AVG,
+         urbn_c_ls = urban * ECO_AVG,
+         mdflt_c_ls = mudflts * AGB_AVG)
+
+mg2000_c_df <- mg2000_c %>%
+  st_set_geometry(NULL)
+
+mg2014_ls_c <- mg2014_ls %>%
+  left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID")) %>%
+  mutate(aqua_c_ls = aqucltr * ECO_AVG,
+         agri_c_ls = agrcltr * ECO_AVG,
+         abnd_c_ls = abandnd * ECO_AVG,
+         salt_c_ls = slt_frm * ECO_AVG,
+         urbn_c_ls = urban * ECO_AVG,
+         mdflt_c_ls = mudflts * AGB_AVG)
+
+mg2014_ls_c_df <- mg2014_ls_c %>%
+  st_set_geometry(NULL)
+
+mg2014_gn_c <- mg2014_gn %>%
+  left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID")) %>%
+  mutate(aqua_c_ls = aqucltr * AGB_AVG,
+         agri_c_ls = agrcltr * AGB_AVG,
+         abnd_c_ls = abandnd * AGB_AVG,
+         salt_c_ls = slt_frm * AGB_AVG,
+         urbn_c_ls = urban * AGB_AVG,
+         mdflt_c_ls = mudflts * AGB_AVG)
+
+mg2014_gn_c_df <- mg2014_gn_c %>%
+  st_set_geometry(NULL)
+
+ttl_ls_2000 <- colSums(mg2000_c_df[, 20:26], na.rm = T)
+ttl_ls_2014 <- colSums(mg2014_ls_c_df[, 21:26], na.rm = T)
+ttl_gn_2014 <- colSums(mg2014_gn_c_df[, 20:25], na.rm = T)
+
+loss2000 <- sum(ttl_ls_2000[1:6])
+loss2014 <- sum(ttl_ls_2014[1:5])
+gain2014 <- sum(ttl_gn_2014[1:5])
+
+
+
+
 
 #-------------------------------------------
 # Intersect the provinces C data with historic mangrove extent
