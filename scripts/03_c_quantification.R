@@ -27,6 +27,7 @@ print("Begin Step 3. backmodeling of carbon stocks to historical mangrove extent
 library(cluster)
 library(factoextra)
 library(gdalUtils)
+library(gdata)
 library(NbClust)
 library(raster)
 library(rgdal)
@@ -115,242 +116,134 @@ dstrcts_c <- dstrcts_sp %>%
 
 st_write(dstrcts_c, dsn = paste0(proc_dir, "shapefiles/dstrcts_c"), layer = "dstrcts_c", driver = "ESRI Shapefile")
 
-rm(list = ls())
 
-#--------------
-# Intersect the districts C data with historic mangrove extent
+keep(proc_dir, raw_dir, scratch_dir, sure = T)
+   
+#------------------------------
+
+###################################################################
+## Calculate carbon stock losses and gains at the national scale ##
+###################################################################
+
+# Load in data
 
 dstrcts_c_df <- st_read(paste0(proc_dir, "shapefiles/dstrcts_c/")) %>%
   st_set_geometry(NULL)
 
-mg2000 <- st_read(paste0(proc_dir, "shapefiles/dstrct_ttls_2000"))
-mg2014_ls <- st_read(paste0(proc_dir, "shapefiles/dstrct_losses_2014"))
-mg2014_gn <- st_read(paste0(proc_dir, "shapefiles/dstrct_gains_2014"))
+mg2000 <- st_read(paste0(proc_dir, "shapefiles/dstrct_ttls_2000")) %>%
+  left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID"))
+
+mg2014 <- st_read(paste0(proc_dir, "shapefiles/dstrct_ttls_2014")) %>%
+  left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID"))
+
+mg2014_ls <- st_read(paste0(proc_dir, "shapefiles/dstrct_losses_2014")) %>%
+  left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID")) %>%
+  mutate(mines = NA)
+
+mg2014_gn <- st_read(paste0(proc_dir, "shapefiles/dstrct_gains_2014")) %>%
+  left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID"))
+
+
+# Build a helper function to apply varying rates of stock change
+
+calcCarbon <- function(sf_obj, agb_rate, soc_rate) {
+  
+  df <- sf_obj %>%
+    mutate(aqua_c = (aqucltr * AGB_AVG * agb_rate) + (aqucltr * SOC_AVG * soc_rate),
+           agri_c = (agrcltr * AGB_AVG * agb_rate) + (agrcltr * SOC_AVG * soc_rate),
+           mine_c = (mines * AGB_AVG * agb_rate) + (mines * SOC_AVG * soc_rate),
+           abnd_c = (abandnd * AGB_AVG * agb_rate) + (abandnd * SOC_AVG * soc_rate),
+           salt_c = (slt_frm * AGB_AVG * agb_rate) + (slt_frm * SOC_AVG * soc_rate),
+           urbn_c = (urban * AGB_AVG * agb_rate) + (urban * SOC_AVG * soc_rate)) %>%
+    st_set_geometry(NULL) %>%
+    dplyr::select(aqua_c, agri_c, mine_c, abnd_c, salt_c, urbn_c)
+
+  ttls <- colSums(df, na.rm = T)
+  ttl <- sum(ttls)
+
+  return(ttl)
+  
+}
+
+# Calculate high, medium and low loss rates for pre 1960 - 2000
+
+mg2000_hls <- calcCarbon(mg2000, agb_rate = 1, soc_rate = 0.67)
+mg2000_mls <- calcCarbon(mg2000, agb_rate = 0.82, soc_rate = 0.54)
+mg2000_lls <- calcCarbon(mg2000, agb_rate = 0.47, soc_rate = 0.41)
+
+# High loss, varying gains for 2000 - 2014
+
+mg2014_hls_hgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 1, soc_rate = 0.19)
+mg2014_hls_mgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.56, soc_rate = 0.1)
+mg2014_hls_lgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.35, soc_rate = 0.05)
+
+# Medium loss, varying gains for 2000 - 2014
+
+mg2014_mls_hgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 1, soc_rate = 0.19)
+mg2014_mls_mgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.56, soc_rate = 0.1)
+mg2014_mls_lgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.35, soc_rate = 0.05)
+
+# Low loss, varying gains for 2000 - 2014
+
+mg2014_lls_hgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 1, soc_rate = 0.19)
+mg2014_lls_mgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.56, soc_rate = 0.1)
+mg2014_lls_lgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.35, soc_rate = 0.05)
+
+carbonTable <- rbind(mg2000_hls, mg2000_mls, mg2000_lls,
+                     mg2014_hls_hgn, mg2014_hls_mgn, mg2014_hls_lgn,
+                     mg2014_mls_hgn, mg2014_mls_mgn, mg2014_mls_lgn,
+                     mg2014_lls_hgn, mg2014_lls_mgn, mg2014_lls_lgn)
+
 
 mg2000_c <- mg2000 %>%
-  left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID")) %>%
-  mutate(aqua_c_ls = aqucltr * ECO_AVG,
+  mutate(aqua_c_ls_hgh = aqucltr * ECO_AVG,
          agri_c_ls = agrcltr * ECO_AVG,
          mine_c_ls = mines * ECO_AVG,
          abnd_c_ls = abandnd * ECO_AVG,
          salt_c_ls = slt_frm * ECO_AVG,
-         urbn_c_ls = urban * ECO_AVG,
-         mdflt_c_ls = mudflts * AGB_AVG)
+         urbn_c_ls = urban * ECO_AVG)
 
 mg2000_c_df <- mg2000_c %>%
   st_set_geometry(NULL)
 
-mg2014_ls_c <- mg2014_ls %>%
-  left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID")) %>%
-  mutate(aqua_c_ls = aqucltr * ECO_AVG,
-         agri_c_ls = agrcltr * ECO_AVG,
-         abnd_c_ls = abandnd * ECO_AVG,
-         salt_c_ls = slt_frm * ECO_AVG,
-         urbn_c_ls = urban * ECO_AVG,
-         mdflt_c_ls = mudflts * AGB_AVG)
+ttl_ls_2000 <- colSums(mg2000_c_df[, 20:25], na.rm = T)
+(loss2000 <- sum(ttl_ls_2000[1:6]) )
 
-mg2014_ls_c_df <- mg2014_ls_c %>%
-  st_set_geometry(NULL)
 
-mg2014_gn_c <- mg2014_gn %>%
-  left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID")) %>%
-  mutate(aqua_c_ls = aqucltr * AGB_AVG,
-         agri_c_ls = agrcltr * AGB_AVG,
-         abnd_c_ls = abandnd * AGB_AVG,
-         salt_c_ls = slt_frm * AGB_AVG,
-         urbn_c_ls = urban * AGB_AVG,
-         mdflt_c_ls = mudflts * AGB_AVG)
 
-mg2014_gn_c_df <- mg2014_gn_c %>%
-  st_set_geometry(NULL)
 
-ttl_ls_2000 <- colSums(mg2000_c_df[, 20:26], na.rm = T)
-ttl_ls_2014 <- colSums(mg2014_ls_c_df[, 21:26], na.rm = T)
-ttl_gn_2014 <- colSums(mg2014_gn_c_df[, 20:25], na.rm = T)
+# Calculate net change for comparison
 
-loss2000 <- sum(ttl_ls_2000[1:6])
-loss2014 <- sum(ttl_ls_2014[1:5])
-gain2014 <- sum(ttl_gn_2014[1:5])
+mg2000_df <- mg2000 %>%
+  st_set_geometry(NULL) %>%
+  select(ADM2_EN, mangrov)
 
+mg2014_df <- mg2014 %>%
+  st_set_geometry(NULL) %>%
+  select(ADM2_EN, mangrov)
 
+net <- mg2014_df %>%
+  left_join(mg2000_df, by = "ADM2_EN", suffix = c("_14", "_00")) %>%
+  replace(is.na(.), 0) %>%
+  mutate(mangrov_net = mangrov_14 - mangrov_00) %>%
+  select(ADM2_EN, mangrov_net) %>%
+  left_join(dstrcts_c_df, by = c("ADM2_EN")) %>%
+  mutate(net_mg_c_ls = mangrov_net * ECO_AVG) %>%
+  select(ADM2_EN, net_mg_c_ls)
 
+sum(net$net_mg_c_ls)
 
 
-#-------------------------------------------
-# Intersect the provinces C data with historic mangrove extent
+mg2014_ls_df <- mg2014_ls %>%
+  st_set_geometry(NULL) %>%
+  select(aqucltr, agrcltr, mangrov, abandnd, slt_frm, urban) %>%
+  summarize_all(~sum(., na.rm = T))
 
-crs102028 <- "+proj=aea +lat_1=7 +lat_2=-32 +lat_0=-15 +lon_0=125 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
 
-mg_historic <- st_read(paste0(in_dir, "shapefiles/dissolved_102028.shp"))
-mg_2000 <- st_read(paste0(in_dir, "shapefiles/mg2000_102028.shp"))
-mg_2014 <- st_read(paste0(in_dir, "shapefiles/mg2014_102028.shp"))
-
-chngwts_c_102028 <- chngwts_c %>%
-  st_transform(crs102028)
-
-mg_hstrc_chngwts <- st_intersection(chngwts_c_102028, mg_historic)
-
-
-
-
-
-
-
-
-
-
-# Union and buffer the chongwats by 10 km 
-
-albersSEAsia <- CRS(" +proj=aea +lat_1=7 +lat_2=-32 +lat_0=-15 +lon_0=125 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs ")
-epsg4326 <- CRS(" +proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs ")
-
-cngwt <- st_read("./data/processed/cstl_prvncs")
-
-cngwt_union <- st_union(cngwt) %>%
-  st_transform(crs = albersSEAsia)
-
-cngwt_bffr <- st_buffer(cngwt_union, 5000) %>%
-  st_transform(crs = epsg4326)
-
-adm0 <- read_sf("./data/raw/tha_admbnda_adm0_rtsd_20190221.shp")
-sea_adm0 <- read_sf("./data/raw/se_asia.shp")
-
-# Geomorphology data
-
-tsm <- raster("../../ch1_c_estimation/analysis/data/raw/site_map/tha_mean_tsm.tif")
-tdl <- raster("../../ch1_c_estimation/analysis/data/raw/site_map/m2_4326_a.tif")
-
-tdl_new <- resample(tdl, tsm, method = "bilinear")
-
-gmrphStack <- stack(tsm, tdl_new)
-
-gmrphStackMskd <- mask(gmrphStack, as(cngwt_bffr, "Spatial"))
-
-gmrph_dat <- raster::extract(gmrphStack, as(cngwt_bffr, "Spatial"), cellnumbers = T) %>%
-  as.data.frame()  %>%
-  rename(tsm = "tha_mean_tsm",
-         tdl = "m2_4326_a",
-         id = "cell")
-
-# Identify optimal number of clusters using "elbow" method
-
-maxClstrs <- 20
-
-optClstrs <- data.frame(clstrs = seq(1, maxClstrs, 1),
-                        tot_wss = NA)
-
-for(i in 1:maxClstrs) {
-  
-  kmeansClass <- kmeans(na.omit(gmrph_dat[ , c(2, 3)]), i, nstart = 30)
-  optClstrs$tot_wss[i] <- kmeansClass$tot.withinss
-  
-}
-
-fviz_nbclust(na.omit(gmrph_dat[, c(2,3)]), kmeans, method = 'wss', k.max = 25, nstart = 30)
-fviz_nbclust(na.omit(gmrph_dat[, c(2,3)]), kmeans, method = 'silhouette', k.max = 25, nstart = 30)
-
-plot(optClstrs)
-
-# Classify coastline based on optimal number of clusters
-
-idx <- na.omit(gmrph_dat[ , c(1, 2, 3)])
-
-kmeansClass <- kmeans(na.omit(gmrph_dat[ , c(2, 3)]), 4, nstart = 30)
-
-idx <- cbind(idx, kmeansClass$cluster)
-
-classed_dat <- gmrph_dat %>%
-  left_join(idx, by = c("id")) %>%
-  rename(class = "kmeansClass$cluster") %>%
-  rename(tsm = "tsm.x",
-         tdl = "tdl.x") %>%
-  dplyr::select(id, tsm, tdl, class)
-
-classes <- gmrphStack[[1]]
-
-values(classes) <- 0
-
-dat <- values(classes)
-
-vals <- dat %>%
-  as.data.frame() %>%
-  mutate(id = row_number()) %>%
-  left_join(classed_dat, by = "id") %>%
-  pull(class)
-
-
-values(classes) <- vals
-classesCrpd <- crop(classes, as(cngwt_bffr, "Spatial"))
-classesMskd <- mask(classesCrpd, as(cngwt_bffr, "Spatial"))
-
-classesMskd_df <- as.data.frame(classesMskd, xy = T, na.rm = T)
-
-ggplot(sea_adm0) +
-  geom_sf(fill = "#F2F2F2") +
-  geom_sf(data = adm0, aes(geometry = geometry), fill = "#E5E5E5") +
-  geom_raster(data = classesMskd_df, aes(x = x, y = y, fill = factor(tha_mean_tsm))) +
-  theme_bw() +
-  xlab("") +
-  ylab("") +
-  labs(fill = "Cluster") +
-  xlim(c(98, 105)) +
-  ylim(c(5, 15)) +
-  ggtitle("no. clusters = 4") +
-  theme(legend.position = "bottom")
-
-
-# Stratify height data
-
-library(BAMMtools)   # For Jenks Breaks
-
-simard_agb <- raster("../../ch1_c_estimation/analysis/data/raw/modeled_datasets/Mangrove_agb_Thailand.tif")
-simard_height <- raster("~/Desktop/mangrove_c_model_data/CMS_Global_Map_Mangrove_Canopy_1665/data/Mangrove_hmax95_Thailand.tif")
-
-hgt_resample <- raster(nrow = 28062/3, ncol = 20575/3, crs = epsg4326, ext = extent(simard_height))
-
-simard_height_rsmpl <- resample(simard_height, hgt_resample, method = "bilinear")
-
-
-# For height
-m_hgt <- c(0.5, 8.5, 1, 8.5, 15.3, 2, 15.3, 22.1, 3)
-rclmat_hgt <- matrix(m_hgt, ncol = 3, byrow = T)
-rc <- reclassify(simard_height, rclmat_hgt)
-
-# For biomass
-m <- c(57, 99, 1, 99, 139, 2, 139, 185, 3)
-rclmat <- matrix(m, ncol = 3, byrow = T)
-rc <- reclassify(simard_agb, rclmat)
-
-simard_height_df_rs <- as.data.frame(simard_height_rsmpl, xy = T, na.rm = T)
-colnames(simard_height_df_rs) <- c("hgt", "x", "y")
-
-simard_height_df <- as.data.frame(simard_height, xy = T, na.rm = T)
-colnames(simard_height_df) <- c("hgt", "x", "y")
-
-getJenksBreaks(simard_height_df$hgt, 5)
-
-#0.8485  6.7880 11.8790 16.9700 22.0610
-
-ggplot(simard_height_df, aes(hgt)) +
-  geom_histogram(bins = 20) +
-  theme_bw() +
-  xlab("Mean mangrove canopy height, 30 x 30 m (m)") +
-  ylab("Count")
-
-ggplot(sea_adm0) +
-  geom_sf(fill = "#F2F2F2") +
-  geom_sf(data = adm0, aes(geometry = geometry), fill = "#E5E5E5") +
-  geom_raster(data = simard_height_df, aes(x = x, y = y, fill = hgt)) +
-  theme_bw() +
-  xlab("") +
-  ylab("") +
-  labs(fill = "Cluster") +
-  #coord_sf(xlim = c(99.85, 100.05), ylim = c(13.2, 13.4)) +
-  xlim(c(99.85, 100.05)) +
-  ylim(c(13.2, 13.4)) +
-  ggtitle("no. clusters = 4") +
-  theme(legend.position = "bottom")
-
+mg2014_gn_df <- mg2014_gn %>%
+  st_set_geometry(NULL) %>%
+  select(aqucltr, agrcltr, mangrov, abandnd, slt_frm, urban) %>%
+  summarize_all(~sum(., na.rm = T))
 
 
 
