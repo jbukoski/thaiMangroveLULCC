@@ -28,6 +28,9 @@ library(cluster)
 library(factoextra)
 library(gdalUtils)
 library(gdata)
+library(ggpubr)
+library(ggthemes)
+library(gridExtra)
 library(NbClust)
 library(raster)
 library(rgdal)
@@ -161,7 +164,7 @@ calcCarbon <- function(sf_obj, agb_rate, soc_rate) {
   ttls <- colSums(df, na.rm = T)
   ttl <- sum(ttls)
 
-  return(ttl)
+  return(ttls)
   
 }
 
@@ -192,24 +195,11 @@ mg2014_lls_lgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calc
 carbonTable <- rbind(mg2000_hls, mg2000_mls, mg2000_lls,
                      mg2014_hls_hgn, mg2014_hls_mgn, mg2014_hls_lgn,
                      mg2014_mls_hgn, mg2014_mls_mgn, mg2014_mls_lgn,
-                     mg2014_lls_hgn, mg2014_lls_mgn, mg2014_lls_lgn)
-
-
-mg2000_c <- mg2000 %>%
-  mutate(aqua_c_ls_hgh = aqucltr * ECO_AVG,
-         agri_c_ls = agrcltr * ECO_AVG,
-         mine_c_ls = mines * ECO_AVG,
-         abnd_c_ls = abandnd * ECO_AVG,
-         salt_c_ls = slt_frm * ECO_AVG,
-         urbn_c_ls = urban * ECO_AVG)
-
-mg2000_c_df <- mg2000_c %>%
-  st_set_geometry(NULL)
-
-ttl_ls_2000 <- colSums(mg2000_c_df[, 20:25], na.rm = T)
-(loss2000 <- sum(ttl_ls_2000[1:6]) )
-
-
+                     mg2014_lls_hgn, mg2014_lls_mgn, mg2014_lls_lgn) %>%
+  as.data.frame() %>%
+  mutate(year = c(rep("2000", 3), rep("2014", 9)),
+         loss = c("hgh", "med", "low", rep("hgh", 3), rep("med", 3), rep("low", 3)),
+         gain = c(rep(NA, 3), rep(c("hgh", "med", "low"), 3)))
 
 
 # Calculate net change for comparison
@@ -228,7 +218,7 @@ net <- mg2014_df %>%
   mutate(mangrov_net = mangrov_14 - mangrov_00) %>%
   select(ADM2_EN, mangrov_net) %>%
   left_join(dstrcts_c_df, by = c("ADM2_EN")) %>%
-  mutate(net_mg_c_ls = mangrov_net * ECO_AVG) %>%
+  mutate(net_mg_c_ls = (mangrov_net * AGB_AVG * 0.82) + (mangrov_net * SOC_AVG * 0.54)) %>%
   select(ADM2_EN, net_mg_c_ls)
 
 sum(net$net_mg_c_ls)
@@ -246,4 +236,57 @@ mg2014_gn_df <- mg2014_gn %>%
   summarize_all(~sum(., na.rm = T))
 
 
+
+#---------------------------------------
+# Build a plot to summarize the data:
+
+tab <- data.frame(year = factor(c("1960-2000", "2000-2014, LULCC", "2000-2014, LULCC", "2000-2014, LULCC", "2000-2014, net")),
+                  carbon = c(-41.3, -9.7, 3.4, -3.4, -2.3),
+                  style = factor(c("Net", "Net", "Gain", "Loss", "Net"), levels = c("Net", "Gain", "Loss")),
+                  alph = c(1, 1, 0.5, 0.5, 1),
+                  fct = rep(" ", 5))
+
+tab2 <- data.frame(loss = factor(c(rep("High Loss", 9), rep("Medium Loss", 9), rep("Low Loss", 9)), levels = c("High Loss", "Medium Loss", "Low Loss")),
+                   scenario = factor(rep( c(rep("Low Gain", 3), rep("Medium Gain", 3), rep("High Gain", 3)), 3), 
+                                     levels = c("Low Gain", "Medium Gain", "High Gain")),
+                   value = c(-2.0, 2.0, -14.1, -3.4, 3.4, -12.7, -6.1, 6.1, -10.0, -2.0, 2.0, -11.1, -3.4, 3.4, -9.7, -6.1, 6.1, -7, -2.0, 2.0, -7.0, -3.4, 3.4, -5.6, -6.1, 6.1, -2.9),
+                   type = rep(c("Loss", "Gain", "Net"), 9),
+                   type2 = rep(c(rep("dotted", 2), "solid"), 9),
+                   alph = rep(c(rep(0.5, 2), 1), 9))
+
+p1 <- ggplot(tab) +
+  facet_wrap(~fct) +
+  geom_bar(aes(x = year, y = carbon, fill = factor(style, levels = c("Loss", "Gain", "Net")), 
+               linetype = style), col = "black", stat = "identity", width = 0.6) +
+  scale_fill_manual("Carbon Flux", values = c("Net" = "#44aa99", "Gain" = "#117733", "Loss" = "#88ccee")) +
+  ylim(c(-42, 10)) +
+  ggtitle("a) Carbon Stock Losses by Time Period") +
+  labs(y = "Million Mg C") +
+  guides(linetype = "none",
+         alpha = "none") +
+  theme_tufte() +
+  theme(axis.title.x = element_blank(),
+        legend.position = c(0.5, 0.97),
+        legend.direction = "horizontal")
+
+p2 <- ggplot(tab2) +
+  facet_wrap(~loss) +
+  geom_bar(aes(x = scenario, y = value, fill = type, 
+               linetype = factor(type2, levels = c("solid", "dotted"))), 
+           col = "black", stat = "identity") +
+  scale_fill_manual("Carbon Flux", values = c("Net" = "#44aa99", "Gain" = "#117733", "Loss" = "#88ccee")) +
+  ylim(c(-42, 10)) +
+  ggtitle("b) Variation in Loss and Gain Rate Assumptions") +
+  guides(linetype = "none",
+         alpha = "none") +
+  labs(y = "Million Mg C") +
+  theme_tufte() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+
+fig2 <- grid.arrange(p1, p2, nrow = 1, widths = c(0.33, 0.66))
+
+ggsave("./figs/f2_stocks.jpg", fig2, width = 12, height = 5, units = c("in"), device = "jpeg")
 
