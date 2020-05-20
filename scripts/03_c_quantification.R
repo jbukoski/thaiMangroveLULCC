@@ -24,14 +24,11 @@ print("Begin Step 3. backmodeling of carbon stocks to historical mangrove extent
 #-----------------------------------
 # Load in libaries
 
-library(cluster)
-library(factoextra)
 library(gdalUtils)
 library(gdata)
 library(ggpubr)
 library(ggthemes)
 library(gridExtra)
-library(NbClust)
 library(raster)
 library(rgdal)
 library(sf)
@@ -236,57 +233,38 @@ mg2014_gn_df <- mg2014_gn %>%
   summarize_all(~sum(., na.rm = T))
 
 
+#---------------------------------------------
+# Potential carbon gains from restoration
 
-#---------------------------------------
-# Build a plot to summarize the data:
+dstrcts_c_df <- st_read(paste0(proc_dir, "shapefiles/dstrcts_c/")) %>%
+  st_set_geometry(NULL)
 
-tab <- data.frame(year = factor(c("1960-2000", "2000-2014, LULCC", "2000-2014, LULCC", "2000-2014, LULCC", "2000-2014, net")),
-                  carbon = c(-41.3, -9.7, 3.4, -3.4, -2.3),
-                  style = factor(c("Net", "Net", "Gain", "Loss", "Net"), levels = c("Net", "Gain", "Loss")),
-                  alph = c(1, 1, 0.5, 0.5, 1),
-                  fct = rep(" ", 5))
+mg2014_rstr <- st_read(paste0(proc_dir, "shapefiles/dstrct_ttls_2014")) %>%
+  left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID")) %>%
+  select(ADM1_EN, ADM2_ID, ADM2_EN, aqucltr, agrcltr, abandnd, 
+         AGB_AVG, AGB_SD, SOC_AVG, SOC_SD)
 
-tab2 <- data.frame(loss = factor(c(rep("High Loss", 9), rep("Medium Loss", 9), rep("Low Loss", 9)), levels = c("High Loss", "Medium Loss", "Low Loss")),
-                   scenario = factor(rep( c(rep("Low Gain", 3), rep("Medium Gain", 3), rep("High Gain", 3)), 3), 
-                                     levels = c("Low Gain", "Medium Gain", "High Gain")),
-                   value = c(-2.0, 2.0, -14.1, -3.4, 3.4, -12.7, -6.1, 6.1, -10.0, -2.0, 2.0, -11.1, -3.4, 3.4, -9.7, -6.1, 6.1, -7, -2.0, 2.0, -7.0, -3.4, 3.4, -5.6, -6.1, 6.1, -2.9),
-                   type = rep(c("Loss", "Gain", "Net"), 9),
-                   type2 = rep(c(rep("dotted", 2), "solid"), 9),
-                   alph = rep(c(rep(0.5, 2), 1), 9))
+calcRestorationCarbon <- function(df, rstr_rate, agb_rate, soc_rate) {
+  
+  df_rstr <- df %>%
+    mutate(aqucltr_rstr = aqucltr * rstr_rate,
+           agrcltr_rstr = agrcltr * rstr_rate,
+           abandnd_rstr = abandnd) %>%
+    rowwise() %>%
+    mutate(total = aqucltr_rstr + agrcltr_rstr + abandnd_rstr) %>%
+    ungroup() %>%
+    mutate(agb_rstr = total * agb_rate * AGB_AVG,
+           soc_rstr = total * soc_rate * SOC_AVG) %>%
+    select(total, agb_rstr, soc_rstr)
+    
+  ttls <- colSums(df_rstr, na.rm = T)
+  ttl <- sum(ttls)
+  
+  return(ttl)
+  
+}
 
-p1 <- ggplot(tab) +
-  facet_wrap(~fct) +
-  geom_bar(aes(x = year, y = carbon, fill = factor(style, levels = c("Loss", "Gain", "Net")), 
-               linetype = style), col = "black", stat = "identity", width = 0.6) +
-  scale_fill_manual("Carbon Flux", values = c("Net" = "#44aa99", "Gain" = "#117733", "Loss" = "#88ccee")) +
-  ylim(c(-42, 10)) +
-  ggtitle("a) Carbon Stock Losses by Time Period") +
-  labs(y = "Million Mg C") +
-  guides(linetype = "none",
-         alpha = "none") +
-  theme_tufte() +
-  theme(axis.title.x = element_blank(),
-        legend.position = c(0.5, 0.97),
-        legend.direction = "horizontal")
+calcRestorationCarbon(mg2014_rstr, 0.001, 0.35, 0.05)
+calcRestorationCarbon(mg2014_rstr, 0.1, 0.56, 0.10)
 
-p2 <- ggplot(tab2) +
-  facet_wrap(~loss) +
-  geom_bar(aes(x = scenario, y = value, fill = type, 
-               linetype = factor(type2, levels = c("solid", "dotted"))), 
-           col = "black", stat = "identity") +
-  scale_fill_manual("Carbon Flux", values = c("Net" = "#44aa99", "Gain" = "#117733", "Loss" = "#88ccee")) +
-  ylim(c(-42, 10)) +
-  ggtitle("b) Variation in Loss and Gain Rate Assumptions") +
-  guides(linetype = "none",
-         alpha = "none") +
-  labs(y = "Million Mg C") +
-  theme_tufte() +
-  theme(legend.position = "none",
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank())
-
-
-fig2 <- grid.arrange(p1, p2, nrow = 1, widths = c(0.33, 0.66))
-
-ggsave("./figs/f2_stocks.jpg", fig2, width = 12, height = 5, units = c("in"), device = "jpeg")
 

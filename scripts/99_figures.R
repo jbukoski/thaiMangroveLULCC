@@ -15,11 +15,14 @@ library(ggpubr)
 library(grid)
 library(gridExtra)
 library(ggthemes)
+library(raster)
+library(rasterVis)
+library(sf)
 library(tidyverse)
 
 #--------------------
 
-in_dir <- "./data/processed/"
+proc_dir <- "./data/processed/"
 scratch_dir <- "./data/scratch/"
 raw_dir <- "./data/raw/"
 
@@ -160,3 +163,84 @@ f2 <- grid.arrange(stocks1960, stocks2000, stocks2014, leg, ncol = 3, nrow = 2,
                    layout_matrix = rbind(c(1, 2, 3), c(4, 4, 4)), heights = c(1, 0.1))
 
 ggsave("./figs/f2_cStocks.jpg", f2, width = 12, height = 5.75, units = c("in"), device = "jpeg")
+
+
+#------------------------------
+# Raster plot with levelplot
+
+gadm_sea <- st_read(paste0(raw_dir, "shapefiles/gadm_se_asia.shp")) %>%
+  as("Spatial")
+    
+tha <- st_read(paste0(raw_dir, "shapefiles/gadm_se_asia.shp")) %>%
+  filter(NAME_0 == "Thailand") %>%
+  as("Spatial")
+
+r <- raster(paste0(proc_dir, "rasters/mg2000.tif"))
+
+filter_r <- r == 3
+filter_r2 <- mask(r, filter_r, maskvalue = 1)
+
+plot(gadm_sea$geometry)
+
+levelplot(r, margin = list(axis = T, FUN = "sum"), colorkey = F,
+          xlab = NULL, ylab = NULL) +
+  layer(sp.polygons(gadm_sea, fill = "light grey", alpha = 0.2)) +
+  layer(sp.polygons(tha, fill = "light grey", alpha = 0.2))
+  
+
+#---------------------------------------
+# Build a plot to summarize the data:
+
+tab <- data.frame(year = factor(c("1960-2000", "2000-2014, LULCC", "2000-2014, LULCC", "2000-2014, LULCC", "2000-2014, net")),
+                  carbon = c(-41.3, -9.7, 3.4, -3.4, -2.3),
+                  style = factor(c("Net", "Net", "Gain", "Loss", "Net"), levels = c("Net", "Gain", "Loss")),
+                  alph = c(1, 1, 0.5, 0.5, 1),
+                  fct = rep(" ", 5))
+
+tab2 <- data.frame(loss = factor(c(rep("High Loss", 9), rep("Medium Loss", 9), rep("Low Loss", 9)), levels = c("High Loss", "Medium Loss", "Low Loss")),
+                   scenario = factor(rep( c(rep("Low Gain", 3), rep("Medium Gain", 3), rep("High Gain", 3)), 3), 
+                                     levels = c("Low Gain", "Medium Gain", "High Gain")),
+                   value = c(-2.0, 2.0, -14.1, -3.4, 3.4, -12.7, -6.1, 6.1, -10.0, -2.0, 2.0, -11.1, -3.4, 3.4, -9.7, -6.1, 6.1, -7, -2.0, 2.0, -7.0, -3.4, 3.4, -5.6, -6.1, 6.1, -2.9),
+                   type = rep(c("Loss", "Gain", "Net"), 9),
+                   type2 = rep(c(rep("dotted", 2), "solid"), 9),
+                   alph = rep(c(rep(0.5, 2), 1), 9))
+
+p1 <- ggplot(tab) +
+  facet_wrap(~fct) +
+  geom_bar(aes(x = year, y = carbon, fill = factor(style, levels = c("Loss", "Gain", "Net")), 
+               linetype = style), col = "black", stat = "identity", width = 0.6) +
+  scale_fill_manual("Carbon Flux", values = c("Net" = "#44aa99", "Gain" = "#117733", "Loss" = "#88ccee")) +
+  ylim(c(-42, 10)) +
+  ggtitle("a) Carbon Stock Losses by Time Period") +
+  labs(y = "Million Mg C") +
+  guides(linetype = "none",
+         alpha = "none") +
+  theme_tufte() +
+  theme(axis.title.x = element_blank(),
+        legend.position = c(0.5, 0.97),
+        legend.direction = "horizontal")
+
+p2 <- ggplot(tab2) +
+  facet_wrap(~loss) +
+  geom_bar(aes(x = scenario, y = value, fill = type, 
+               linetype = factor(type2, levels = c("solid", "dotted"))), 
+           col = "black", stat = "identity") +
+  scale_fill_manual("Carbon Flux", values = c("Net" = "#44aa99", "Gain" = "#117733", "Loss" = "#88ccee")) +
+  ylim(c(-42, 10)) +
+  ggtitle("b) Variation in Loss and Gain Rate Assumptions") +
+  guides(linetype = "none",
+         alpha = "none") +
+  labs(y = "Million Mg C") +
+  theme_tufte() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+
+fig2 <- grid.arrange(p1, p2, nrow = 1, widths = c(0.33, 0.66))
+
+ggsave("./figs/f2_stocks.jpg", fig2, width = 12, height = 5, units = c("in"), device = "jpeg")
+
+
+
+
