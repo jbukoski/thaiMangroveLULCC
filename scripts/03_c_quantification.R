@@ -268,3 +268,30 @@ calcRestorationCarbon(mg2014_rstr, 0.001, 0.35, 0.05)
 calcRestorationCarbon(mg2014_rstr, 0.1, 0.56, 0.10)
 
 
+
+#------------------
+# Scrap code?
+# Recreate Sasmito et al., 2020, Figure 5a
+
+yr <- c(0, 10, 20, 30, 40, 50, 60)
+agb <- c(0, 45, 90, 125, 140, 140, 140)
+
+dat <- data.frame(yr = yr, agb = agb)
+
+# y = a / (1 + b e-kx )
+
+model <- nls(dat$agb ~ a / (1 + b * exp(1) ^ (-k * dat$yr)), start=list(a = 140, b = 13, k = 0.1) )
+
+# a = 142.5455, b = 13.2424, k = 0.1447
+
+# For 15 years, in percent
+
+(142.5455 / (1 + 13.2424 * exp(1) ^ (-0.1447 * 15) )) / 140  * 100
+
+# For 15 years, in percent
+
+(142.5455 / (1 + 13.2424 * exp(1) ^ (-0.1447 * 25) )) / 140 * 100
+
+# For 40 years, in percent 
+
+(142.5455 / (1 + 13.2424 * exp(1) ^ (-0.1447 * 40) )) / 140 * 100
