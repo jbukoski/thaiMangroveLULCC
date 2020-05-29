@@ -173,21 +173,21 @@ mg2000_lls <- calcCarbon(mg2000, agb_rate = 0.47, soc_rate = 0.41)
 
 # High loss, varying gains for 2000 - 2014
 
-mg2014_hls_hgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 1, soc_rate = 0.19)
-mg2014_hls_mgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.56, soc_rate = 0.1)
-mg2014_hls_lgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.35, soc_rate = 0.05)
+mg2014_hls_hgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.98, soc_rate = 0.19)
+mg2014_hls_mgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.75, soc_rate = 0.1)
+mg2014_hls_lgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.41, soc_rate = 0.05)
 
 # Medium loss, varying gains for 2000 - 2014
 
-mg2014_mls_hgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 1, soc_rate = 0.19)
-mg2014_mls_mgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.56, soc_rate = 0.1)
-mg2014_mls_lgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.35, soc_rate = 0.05)
+mg2014_mls_hgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.98, soc_rate = 0.19)
+mg2014_mls_mgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.75, soc_rate = 0.1)
+mg2014_mls_lgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.41, soc_rate = 0.05)
 
 # Low loss, varying gains for 2000 - 2014
 
-mg2014_lls_hgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 1, soc_rate = 0.19)
-mg2014_lls_mgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.56, soc_rate = 0.1)
-mg2014_lls_lgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.35, soc_rate = 0.05)
+mg2014_lls_hgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.98, soc_rate = 0.19)
+mg2014_lls_mgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.75, soc_rate = 0.1)
+mg2014_lls_lgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.41, soc_rate = 0.05)
 
 carbonTable <- rbind(mg2000_hls, mg2000_mls, mg2000_lls,
                      mg2014_hls_hgn, mg2014_hls_mgn, mg2014_hls_lgn,
@@ -241,7 +241,7 @@ dstrcts_c_df <- st_read(paste0(proc_dir, "shapefiles/dstrcts_c/")) %>%
 
 mg2014_rstr <- st_read(paste0(proc_dir, "shapefiles/dstrct_ttls_2014")) %>%
   left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID")) %>%
-  select(ADM1_EN, ADM2_ID, ADM2_EN, aqucltr, agrcltr, abandnd, 
+  dplyr::select(ADM1_EN, ADM2_ID, ADM2_EN, aqucltr, agrcltr, abandnd, 
          AGB_AVG, AGB_SD, SOC_AVG, SOC_SD)
 
 calcRestorationCarbon <- function(df, rstr_rate, agb_rate, soc_rate) {
@@ -255,7 +255,7 @@ calcRestorationCarbon <- function(df, rstr_rate, agb_rate, soc_rate) {
     ungroup() %>%
     mutate(agb_rstr = total * agb_rate * AGB_AVG,
            soc_rstr = total * soc_rate * SOC_AVG) %>%
-    select(total, agb_rstr, soc_rstr)
+    dplyr::select(total, agb_rstr, soc_rstr)
     
   ttls <- colSums(df_rstr, na.rm = T)
   ttl <- sum(ttls)
@@ -264,10 +264,14 @@ calcRestorationCarbon <- function(df, rstr_rate, agb_rate, soc_rate) {
   
 }
 
-calcRestorationCarbon(mg2014_rstr, 0.001, 0.35, 0.05)
-calcRestorationCarbon(mg2014_rstr, 0.1, 0.56, 0.10)
+agb <- 0.41
+soc <- 0.05
 
-
+calcRestorationCarbon(mg2014_rstr, 0.001, agb, soc)
+calcRestorationCarbon(mg2014_rstr, 0.01, agb, soc)
+calcRestorationCarbon(mg2014_rstr, 0.02, agb, soc)
+calcRestorationCarbon(mg2014_rstr, 0.05, agb, soc)
+calcRestorationCarbon(mg2014_rstr, 0.1, agb, soc)
 
 #------------------
 # Scrap code?
@@ -275,7 +279,7 @@ calcRestorationCarbon(mg2014_rstr, 0.1, 0.56, 0.10)
 
 yr <- c(0, 10, 20, 30, 40, 50, 60)
 agb <- c(0, 45, 90, 125, 140, 140, 140)
-
+  
 dat <- data.frame(yr = yr, agb = agb)
 
 # y = a / (1 + b e-kx )
@@ -295,3 +299,11 @@ model <- nls(dat$agb ~ a / (1 + b * exp(1) ^ (-k * dat$yr)), start=list(a = 140,
 # For 40 years, in percent 
 
 (142.5455 / (1 + 13.2424 * exp(1) ^ (-0.1447 * 40) )) / 140 * 100
+
+
+#---------------------------------
+# Uncertainty - how will I calculate uncertainty for modeled data.
+# Bootstrapping?
+
+
+
