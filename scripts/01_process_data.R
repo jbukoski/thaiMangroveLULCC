@@ -34,7 +34,7 @@ mg2014 <- st_read(paste0(in_dir, "shapefiles/MG_TYPE_57.shp")) %>%
 
 extent(mg2014) == extent(mg2000)
 
-# Resolve differences in codes, adding missing land cover types first
+# Resolve differences in codes, adding missing land cover types first 
 
 w_dat <- st_sf("AREA_RAI" = 0, "Shape_Area" = 0, "CODE" = "W",
                geometry = st_sfc(st_multipolygon(), crs = "EPSG:32647"))
