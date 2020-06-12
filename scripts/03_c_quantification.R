@@ -73,25 +73,27 @@ soc_rmse <- 10.9    # Cross-validation RMSE value reported in Sanderman et al., 
 
 #for(i in 1:nrow(dstrcts_sp)) {
 for(i in 1:1) {
-  
+    
   shp <- dstrcts_sp[i, ]
   
   soc_crop <- crop(soc, shp)
   soc_dat <- raster::extract(soc_crop, shp, df = T)
   
   btstrp_dat <- c()
-  
+    
   for(i in 1:1000) {
     
     soc_vals <- soc_dat$Mangrove_soc_Thailand[!is.na(soc_dat$Mangrove_soc_Thailand)]
     
-    run <- sample(soc_vals, 100, replace = T)
+    run <- sample(soc_vals, 1000, replace = T)
     
     #prpgt_sd <- sqrt( sd(soc_dat$Mangrove_soc_Thailand)^2  + soc_rmse^2  )
     #run2 <- rnorm(nrow(!is.na(soc_dat$Mangrove_soc_Thailand)), mean = mean(soc_dat$Mangrove_soc_Thailand, na.rm = T), sd = prpgt_sd)
     
     btstrp_dat <- c(btstrp_dat, mean(run, na.rm = T))
   }
+  
+  propagate
   
   dstrct_avgs$SOC_AVG[i] <- mean(soc_dat$Mangrove_soc_Thailand, na.rm = T)
   dstrct_avgs$SOC_SD[i] <- sd(soc_dat$Mangrove_soc_Thailand, na.rm = T)
