@@ -241,6 +241,41 @@ fig2 <- grid.arrange(p1, p2, nrow = 1, widths = c(0.33, 0.66))
 
 ggsave("./figs/f2_stocks.jpg", fig2, width = 12, height = 5, units = c("in"), device = "jpeg")
 
+#-----------------------------------------------
+# Biomass growth plot
 
+dat <- read_xlsx("./data/raw/sigit_data.xlsx") %>%
+  dplyr::select(dataset_variable, yr = "regeneration age", agb = mean) %>%
+  filter(dataset_variable == "Aboveground biomass carbon stock") %>%
+  as.data.frame()
 
+prop_df <- read_csv("./data/processed/eq1_mdlRuns.csv")
 
+ggplot(dat, aes(yr, agb)) +
+  geom_point(color = "black") +
+  geom_smooth(method = "nls",
+              method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
+                                 start = list(a = 140, b = 13, k = 0.1)),
+              data = dat,
+              se = FALSE,
+              color = "black") +
+  geom_smooth(method = "nls",
+              method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
+                                 start = list(a = 140, b = 13, k = 0.1)),
+              data = prop_df,
+              se = FALSE,
+              color = "black",
+              linetype = "dashed",
+              aes(x = yr, y = lwr)) +
+  geom_smooth(method = "nls",
+              method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
+                                 start = list(a = 140, b = 13, k = 0.1)),
+              data = prop_df,
+              se = FALSE,
+              color = "black",
+              linetype = "dashed",
+              aes(x = yr, y = upr)) +
+  ylab("Aboveground Biomass Carbon (Mg / ha)") +
+  xlab("Years") +
+  geom_vline(xintercept = 14,linetype = "dashed", color = "red") +
+  theme_tufte()
