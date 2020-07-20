@@ -14,7 +14,9 @@
 #     a. SOC k-means clustering to identify zones
 #     b. Examine height data - how best to do this?
 #  3. Summarize data by chongwat
-#  4. Map average values onto map
+#     a. Derive mean values
+#     b. Derive standard deviation values
+#  4. Assign average values onto map
 #     a. By chongwat
 
 #-----------------------------------
@@ -71,35 +73,18 @@ dstrct_avgs <- data.frame("ADM2_ID" = 1:nrow(dstrcts_sp),
 
 soc_rmse <- 10.9    # Cross-validation RMSE value reported in Sanderman et al., 2018
 
-#for(i in 1:nrow(dstrcts_sp)) {
-for(i in 1:1) {
+for(i in 1:nrow(dstrcts_sp)) {
     
   shp <- dstrcts_sp[i, ]
-  
+    
   soc_crop <- crop(soc, shp)
   soc_dat <- raster::extract(soc_crop, shp, df = T)
-  
-  btstrp_dat <- c()
-    
-  for(i in 1:1000) {
-    
-    soc_vals <- soc_dat$Mangrove_soc_Thailand[!is.na(soc_dat$Mangrove_soc_Thailand)]
-    
-    run <- sample(soc_vals, 1000, replace = T)
-    
-    #prpgt_sd <- sqrt( sd(soc_dat$Mangrove_soc_Thailand)^2  + soc_rmse^2  )
-    #run2 <- rnorm(nrow(!is.na(soc_dat$Mangrove_soc_Thailand)), mean = mean(soc_dat$Mangrove_soc_Thailand, na.rm = T), sd = prpgt_sd)
-    
-    btstrp_dat <- c(btstrp_dat, mean(run, na.rm = T))
-  }
-  
-  propagate
   
   dstrct_avgs$SOC_AVG[i] <- mean(soc_dat$Mangrove_soc_Thailand, na.rm = T)
   dstrct_avgs$SOC_SD[i] <- sd(soc_dat$Mangrove_soc_Thailand, na.rm = T)
   
-  #rm(soc_dat, soc_crop)
-  #gc()
+  rm(soc_dat, soc_crop)
+  gc()
   
 }
 
@@ -136,7 +121,6 @@ dstrcts_c <- dstrcts_sp %>%
                 ECO_AVG, ECO_SD, geometry)
 
 st_write(dstrcts_c, dsn = paste0(proc_dir, "shapefiles/dstrcts_c"), layer = "dstrcts_c", driver = "ESRI Shapefile")
-
 
 keep(proc_dir, raw_dir, scratch_dir, sure = T)
    
@@ -295,31 +279,72 @@ calcRestorationCarbon(mg2014_rstr, 0.05, agb, soc)
 calcRestorationCarbon(mg2014_rstr, 0.1, agb, soc)
 
 #------------------
-# Scrap code?
 # Recreate Sasmito et al., 2020, Figure 5a
 
-yr <- c(0, 10, 20, 30, 40, 50, 60)
-agb <- c(0, 45, 90, 125, 140, 140, 140)
+library(nls2)
+library(propagate)
+
+# Data extracted from Sigit's figure.
+
+dat <- read_csv("./data/raw/sigit_pts.csv", col_names = F) %>%
+  rename(yr = X1, agb = X2) %>%
+  mutate(yr = round(yr),
+         agb = round(agb)) %>%
+  as.data.frame() %>%
+  arrange(yr)
   
-dat <- data.frame(yr = yr, agb = agb)
+# Model form is: y = a / (1 + b * e^-kx )
 
-# y = a / (1 + b e-kx )
+model <- nls(agb ~ a / (1 + b * exp(1) ^ (-k * yr)), start=list(a = 140, b = 13, k = 0.1), data = dat)
 
-model <- nls(dat$agb ~ a / (1 + b * exp(1) ^ (-k * dat$yr)), start=list(a = 140, b = 13, k = 0.1) )
+predictDat <- seq(0, max(dat$yr), by = 2)
 
-# a = 142.5455, b = 13.2424, k = 0.1447
+prop1 <- predictNLS(model, newdata = data.frame(yr = predictDat))
+
+prop_df <- data.frame(yr = predictDat,
+                      lwr = prop1$summary$`Prop.2.5%`,
+                      upr = prop1$summary$`Prop.97.5%`)
+
+ggplot(dat, aes(yr, agb)) +
+  geom_point(color = "black") +
+  geom_smooth(method = "nls",
+              method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
+                                 start = list(a = 140, b = 13, k = 0.1)),
+              data = dat,
+              se = FALSE,
+              color = "black") +
+  geom_smooth(method = "nls",
+              method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
+                                 start = list(a = 140, b = 13, k = 0.1)),
+              data = prop_df,
+              se = FALSE,
+              color = "black",
+              linetype = "dashed",
+              aes(x = yr, y = lwr)) +
+  geom_smooth(method = "nls",
+              method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
+                                 start = list(a = 140, b = 13, k = 0.1)),
+              data = prop_df,
+              se = FALSE,
+              color = "black",
+              linetype = "dashed",
+              aes(x = yr, y = upr)) +
+  ylab("Aboveground Biomass Carbon (Mg / ha)") +
+  xlab("Years") +
+  geom_vline(xintercept = 14,linetype = "dashed", color = "red") +
+  theme_tufte()
 
 # For 15 years, in percent
 
-(142.5455 / (1 + 13.2424 * exp(1) ^ (-0.1447 * 15) )) / 140  * 100
-
-# For 15 years, in percent
-
-(142.5455 / (1 + 13.2424 * exp(1) ^ (-0.1447 * 25) )) / 140 * 100
+yr14val <- (138.7840 / (1 + 17.8151 * exp(1) ^ (-0.1765 * 14) ))
 
 # For 40 years, in percent 
 
-(142.5455 / (1 + 13.2424 * exp(1) ^ (-0.1447 * 40) )) / 140 * 100
+yr50val <- (138.7840 / (1 + 17.8151 * exp(1) ^ (-0.1765 * 50) ))
+
+mean_rate <- 100 * yr14val / yr50val
+low_rate <- 100 * prop_df[prop_df$yr == 14, 2] / yr50val
+high_rate <- 100 * prop_df[prop_df$yr == 14, 3] / yr50val
 
 
 #---------------------------------

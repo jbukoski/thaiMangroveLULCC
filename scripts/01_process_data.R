@@ -4,7 +4,6 @@
 #
 # Section 1. - Processing of DMCR 2002 and 2014 Land Use and Land Cover datasets
 
-
 #-----------------------------------
 
 print("Begin Step 1. processing of raw data...")
@@ -120,7 +119,6 @@ plot(districts_mg["ADM1_EN"])
 plot(mg2000["CODE"], add = T)
 
 st_write(districts_mg, dsn = paste0(out_dir, "shapefiles/districts_mg"), layer = "districts_mg", driver = "ESRI Shapefile")
-
 
 #-----------------------------
 # Courtesy clean-up.
