@@ -249,10 +249,12 @@ net <- mg2014_df %>%
   mutate(mangrov_net = mangrov_14 - mangrov_00) %>%
   select(ADM2_EN, mangrov_net) %>%
   left_join(dstrcts_c_df, by = c("ADM2_EN")) %>%
-  mutate(net_mg_c_ls = (mangrov_net * AGB_AVG * 0.82) + (mangrov_net * SOC_AVG * 0.54)) %>%
-  select(ADM2_EN, net_mg_c_ls)
+  mutate(net_mg_c_ls = (mangrov_net * AGB_AVG * 0.82) + (mangrov_net * SOC_AVG * 0.54),
+         net_mg_c_ls_sd = (mangrov_net * AGB_SD * 0.82) + (mangrov_net * SOC_SD * 0.54)) %>%
+  select(ADM2_EN, net_mg_c_ls, net_mg_c_ls_sd)
 
 sum(net$net_mg_c_ls)
+sum(net$net_mg_c_ls_sd)
 
 
 mg2014_ls_df <- mg2014_ls %>%

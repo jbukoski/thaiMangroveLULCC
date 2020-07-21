@@ -17,6 +17,7 @@ library(gridExtra)
 library(ggthemes)
 library(raster)
 library(rasterVis)
+library(readxl)
 library(sf)
 library(tidyverse)
 
@@ -251,7 +252,7 @@ dat <- read_xlsx("./data/raw/sigit_data.xlsx") %>%
 
 prop_df <- read_csv("./data/processed/eq1_mdlRuns.csv")
 
-ggplot(dat, aes(yr, agb)) +
+growthMdl <- ggplot(dat, aes(yr, agb)) +
   geom_point(color = "black") +
   geom_smooth(method = "nls",
               method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
@@ -279,3 +280,6 @@ ggplot(dat, aes(yr, agb)) +
   xlab("Years") +
   geom_vline(xintercept = 14,linetype = "dashed", color = "red") +
   theme_tufte()
+
+ggsave("./figs/fig4_growth.jpg", growthMdl, width = 8, height = 5, units = c("in"), device = "jpeg")
+
