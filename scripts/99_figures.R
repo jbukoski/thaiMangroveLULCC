@@ -253,7 +253,7 @@ dat <- read_xlsx("./data/raw/sigit_data.xlsx") %>%
 prop_df <- read_csv("./data/processed/eq1_mdlRuns.csv")
 
 growthMdl <- ggplot(dat, aes(yr, agb)) +
-  geom_point(color = "black") +
+  geom_point(color = "dark grey") +
   geom_smooth(method = "nls",
               method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
                                  start = list(a = 140, b = 13, k = 0.1)),
@@ -277,7 +277,7 @@ growthMdl <- ggplot(dat, aes(yr, agb)) +
               linetype = "dashed",
               aes(x = yr, y = upr)) +
   ylab("Aboveground Biomass Carbon (Mg / ha)") +
-  xlab("Years") +
+  xlab("Time Since Regeneration (Years)") +
   geom_vline(xintercept = 14,linetype = "dashed", color = "red") +
   theme_tufte()
 
