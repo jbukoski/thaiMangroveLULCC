@@ -55,7 +55,7 @@ gadm_sea <- st_read(paste0(raw_dir, "shapefiles/gadm_se_asia.shp"))
 tha <- st_read(paste0(raw_dir, "shapefiles/gadm_se_asia.shp")) %>%
   filter(NAME_0 == "Thailand")
   
-mg2014 <- st_read(paste0(in_dir, "shapefiles/dstrct_ttls_2014")) %>%
+mg2014 <- st_read(paste0(proc_dir, "shapefiles/dstrct_ttls_2014")) %>%
     mutate(aqucltr = ifelse(is.na(aqucltr), 0, aqucltr),
            agrcltr = ifelse(is.na(agrcltr), 0, agrcltr),
            mangrov = ifelse(is.na(mangrov), 0, mangrov),
@@ -75,7 +75,7 @@ base <- ggplot(data = gadm_sea) +
         axis.title.y = element_blank())
 
 p1 <- base +
-  geom_sf(data = mg2014, aes(geometry = geometry, fill = (total - mangrove) / 1000), size = 0.2) +
+  geom_sf(data = mg2014, aes(geometry = geometry, fill = (total - mangrov) / 1000), size = 0.2) +
   scale_fill_gradient(low = "#ffffff", high = "#228B22") +
   guides(fill = guide_legend(title = "Mangrove Area (10e3 ha)")) +
   annotate(geom = "text", label = "a",  x = 103.25, y = 13.5, size = 8, color = "black")
@@ -111,13 +111,13 @@ gadm_sea <- st_read(paste0(raw_dir, "shapefiles/gadm_se_asia.shp"))
 tha <- st_read(paste0(raw_dir, "shapefiles/gadm_se_asia.shp")) %>%
   filter(NAME_0 == "Thailand")
 
-mg2000_df <- st_read(paste0(in_dir, "shapefiles/dstrct_ttls_2000"))
+mg2000_df <- st_read(paste0(proc_dir, "shapefiles/dstrct_ttls_2000"))
 st_geometry(mg2000_df) <- NULL
 
-mg2014_df <- st_read(paste0(in_dir, "shapefiles/dstrct_ttls_2000"))
+mg2014_df <- st_read(paste0(proc_dir, "shapefiles/dstrct_ttls_2000"))
 st_geometry(mg2014_df) <- NULL
 
-dstrct_c <- st_read(paste0(in_dir, "shapefiles/dstrcts_c/")) %>%
+dstrct_c <- st_read(paste0(proc_dir, "shapefiles/dstrcts_c/")) %>%
   mutate(ECO_AVG = AGB_AVG + SOC_AVG,
          ECO_SD = sqrt(AGB_SD^2 + SOC_SD^2)) %>%
   left_join(select(mg2000_df, ADM2_EN, mangrov_00 = mangrov, total_00 = total), by = c("ADM2_EN")) %>%
@@ -143,6 +143,7 @@ stocks1960 <- base +
   ggtitle("Pre-1960")
 
 leg <- get_legend(stocks1960)
+
 stocks1960 <- stocks1960 +
   theme(legend.position = "NONE")
 
@@ -252,7 +253,7 @@ dat <- read_xlsx("./data/raw/sigit_data.xlsx") %>%
 
 prop_df <- read_csv("./data/processed/eq1_mdlRuns.csv")
 
-growthMdl <- ggplot(dat, aes(yr, agb)) +
+fig3_growthMdl <- ggplot(dat, aes(yr, agb)) +
   geom_point(color = "dark grey") +
   geom_smooth(method = "nls",
               method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
@@ -276,10 +277,88 @@ growthMdl <- ggplot(dat, aes(yr, agb)) +
               color = "black",
               linetype = "dashed",
               aes(x = yr, y = upr)) +
-  ylab("Aboveground Biomass Carbon (Mg / ha)") +
+  ylab("AGC (Mg / ha)") +
   xlab("Time Since Regeneration (Years)") +
-  geom_vline(xintercept = 14,linetype = "dashed", color = "red") +
-  theme_tufte()
+  annotate("text", x = 18, y = 225, label = "t = 14", col = "red") +
+  geom_vline(xintercept = 14, linetype = "dashed", color = "red") +
+  theme_tufte() +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank())
 
-ggsave("./figs/fig4_growth.jpg", growthMdl, width = 8, height = 5, units = c("in"), device = "jpeg")
+ggsave("./figs/fig2_growth.jpg", fig3_growthMdl, width = 8, height = 5, units = c("in"), device = "jpeg")
 
+
+#----------------------------------------
+# Build bar charts of total carbon emissions under the different assumptions
+
+dat2000 <- read_csv("./data/processed/allPrdsSmry.csv")
+
+fig3 <- dat2000 %>%
+  ggplot() +
+  geom_hline(aes(yintercept = 0), color = "grey", linetype = "dashed") +
+  geom_errorbar(aes(x = year, ymin = carbon + error, ymax = carbon - 1 * (error / abs(error)),
+                    col = factor(style, levels = c("Loss", "Gain" , "Net"))),
+                width = .2, alpha = 0.8) +
+  geom_bar(aes(x = year, y = carbon, fill = factor(style, levels = c("Loss", "Gain", "Net"))),
+           stat = "identity", width = 0.6, alpha = 1) +
+  scale_fill_manual(values = c("Net" = "#A44294", "Gain" = "#44AA99", "Loss" = "#117733")) +
+  scale_color_manual(values = c("Net" = "#A44294", "Gain" = "#44AA99", "Loss" = "#117733")) +
+  labs(y = "Total Emissions (Million Mg C)") +
+  #ggtitle("A. Total & Net Carbon Emissions") +
+  xlab("Time Period & Estimation Approach") +
+  #guides(linetype = "none", alpha = "none") +
+  theme_bw() +
+  guides(color = guide_legend(override.aes = list(color = NA))) +
+  theme(axis.title.x = element_text(margin=margin(15, 0, 0, 0)),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        strip.background = element_blank(),
+        title = element_text(size = 10),
+        strip.text = element_text(" "),
+        legend.title = element_blank(),
+        legend.position = c(0.8, 0.2),
+        legend.direction = "vertical")
+
+fig3
+
+ggsave("./figs/fig3_stocks.jpg", fig3, width = 4, height = 6, units = c("in"), device = "jpeg")
+
+#---------------------------------
+
+dat2014 <- read_csv("./data/processed/carbonSummary2014.csv")
+
+dat2plt <- dat2014 %>%
+  mutate(loss = factor(loss, levels = c("low", "med", "hgh")),
+         gain = factor(gain, levels = c("hgh", "med", "low"))) %>%
+  group_by(loss) %>%
+  mutate(avg_ttl = mean(ttl)) %>%
+  ungroup() %>%
+  mutate(loss_clr = ifelse(loss == "low", "#44aa99", ifelse(loss == "med", "#117733", "#88ccee"))) %>%
+  arrange(loss, ttl)
+
+levels(dat2plt$loss) = list(`Low Rate of C Stock Loss`="low", `Medium Rate of C Stock Loss`="med", `High Rate of C Stock Loss`="hgh")
+levels(dat2plt$gain) = list(High="hgh", Medium="med", Low="low")
+  
+fig4 <- dat2plt %>%
+  ggplot() +
+  facet_wrap(. ~ loss, ncol = 3) + 
+  geom_bar(aes(x = gain, y = ttl, fill = loss), alpha = 0.8, width = 0.7, stat = "identity") +
+  geom_errorbar(aes(x = gain, ymin = ttl - ttl_sd, ymax = ttl + ttl_sd, col = loss), alpha = 0.8, width = .2, position = position_dodge(.9)) +
+  ylab("Total Emissions, 2000-2014 (Million Mg C)") +
+  xlab("Rate of C Stock Gain") +
+  scale_fill_manual(values = c("Low Rate of C Stock Loss" = "#56B4E9", "Medium Rate of C Stock Loss" = "#009E73", "High Rate of C Stock Loss" = "#0072B2")) +
+  scale_color_manual(values = c("Low Rate of C Stock Loss" = "#56B4E9", "Medium Rate of C Stock Loss" = "#009E73", "High Rate of C Stock Loss" = "#0072B2")) +
+  geom_hline(aes(yintercept = avg_ttl, col = loss), linetype = "longdash") +
+  geom_hline(aes(yintercept = net_ttl), col = "#999999", linetype = "dashed") +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        strip.background = element_blank(),
+        legend.position = "none",
+        legend.title = element_blank(),
+        title = element_text(size = 10),
+        axis.title.x = element_text(margin=margin(15, 0, 0, 0)),
+        axis.title.y = element_text(margin=margin(0, 0, 0, 5)))
+
+
+ggsave("./figs/fig4_assumptions.jpg", fig4, width = 8, height = 6, units = c("in"), device = "jpeg")

@@ -225,12 +225,16 @@ carbonTable <- rbind(mg2000_hls, mg2000_mls, mg2000_lls,
                      mg2014_lls_hgn, mg2014_lls_mgn, mg2014_lls_lgn) %>%
   as.data.frame() %>%
   mutate(year = c(rep("2000", 3), rep("2014", 15)),
-         loss = c("hgh", "med", "low", rep(NA, 3), "high", "med", "low", rep("hgh", 3), rep("med", 3), rep("low", 3)),
-         gain = c(rep(NA, 3), "high", "med", "low", rep(NA, 3), rep(c("hgh", "med", "low"), 3)))
-
-carbonTable %>%
+         loss = c(rep(c("hgh", "med", "low"), 3), rep("hgh", 3), rep("med", 3), rep("low", 3)),
+         gain = c(rep(NA, 3), rep(NA, 3), rep(c("hgh", "med", "low"), 4))) %>%
   mutate(ttl = (aqua_c + agri_c + mine_c + abnd_c + salt_c + urbn_c) / 1000000,
          ttl_sd = (aqua_c_sd + agri_c_sd + mine_c_sd + abnd_c_sd + salt_c_sd + urbn_c_sd) / 1000000)
+
+smryDat2000 <- carbonTable[1:9, ] %>%
+  select(year, loss, gain, ttl, ttl_sd)
+
+smryDat2014 <- carbonTable[10:18, ] %>%
+  select(year, loss, gain, ttl, ttl_sd)
 
 
 # Calculate net change for comparison
@@ -253,20 +257,42 @@ net <- mg2014_df %>%
          net_mg_c_ls_sd = (mangrov_net * AGB_SD * 0.82) + (mangrov_net * SOC_SD * 0.54)) %>%
   select(ADM2_EN, net_mg_c_ls, net_mg_c_ls_sd)
 
-sum(net$net_mg_c_ls)
-sum(net$net_mg_c_ls_sd)
+net_total <- sum(net$net_mg_c_ls / 1000000)
+net_total_sd <- sum(net$net_mg_c_ls_sd / 1000000)
+
+smryDat2000 <- smryDat2000 %>%
+  mutate(net_ttl = net_total * -1, net_ttl_sd = net_total_sd * -1)
+
+smryDat2014 <- smryDat2014 %>%
+  mutate(net_ttl = net_total * -1, net_ttl_sd = net_total_sd * -1)
+
+allPrdsSmry <- data.frame(year = c("1960 - 2000", "2000-2014, LULCC", "2000-2014, LULCC", "2000-2014, net"),
+                          carbon = c(-41.3, -13.1, 2.7, -2.3),
+                          error = c(-25.5, -7.7, 2.3, -1.3),
+                          net = c(NA, -10.4, -10.4, -2.3),
+                          style = c("Loss", "Loss", "Gain", "Net"))
 
 
-mg2014_ls_df <- mg2014_ls %>%
-  st_set_geometry(NULL) %>%
-  select(aqucltr, agrcltr, mangrov, abandnd, slt_frm, urban) %>%
-  summarize_all(~sum(., na.rm = T))
+write_csv(allPrdsSmry, "./data/processed/allPrdsSmry.csv")
+write_csv(smryDat2014, "./data/processed/carbonSummary2014.csv")
 
 
-mg2014_gn_df <- mg2014_gn %>%
-  st_set_geometry(NULL) %>%
-  select(aqucltr, agrcltr, mangrov, abandnd, slt_frm, urban) %>%
-  summarize_all(~sum(., na.rm = T))
+
+
+
+
+
+
+# mg2014_ls_df <- mg2014_ls %>%
+#   st_set_geometry(NULL) %>%
+#   select(aqucltr, agrcltr, mangrov, abandnd, slt_frm, urban) %>%
+#   summarize_all(~sum(., na.rm = T))
+# 
+# 
+# mg2014_gn_df <- mg2014_gn %>%
+#   st_set_geometry(NULL) %>%
+#   select(aqucltr, agrcltr, mangrov, abandnd, slt_frm, urban) %>%
+#   summarize_all(~sum(., na.rm = T))
 
 
 #---------------------------------------------
