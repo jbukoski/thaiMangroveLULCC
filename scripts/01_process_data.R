@@ -25,10 +25,10 @@ library(tidyverse)
 #-----------------------------
 # Section 1
 
-mg2000 <- st_read(paste0(in_dir, "shapefiles/MG_TYPE_43.shp")) %>%
+mg2000 <- st_read(paste0(raw_dir, "shapefiles/MG_TYPE_43.shp")) %>%
   dplyr::select(-OBJECTID_1, -GZONE_NAME, -Shape_Leng)
 
-mg2014 <- st_read(paste0(in_dir, "shapefiles/MG_TYPE_57.shp")) %>%
+mg2014 <- st_read(paste0(raw_dir, "shapefiles/MG_TYPE_57.shp")) %>%
   dplyr::select(-OBJECTID, -lu_name, -Shape_Leng)
 
 extent(mg2014) == extent(mg2000)
@@ -54,7 +54,8 @@ adjust_codes <- function(tibb) {
   return (tibb %>%
     mutate(code_crctr = as.character(CODE)) %>%
     mutate(code_new = ifelse(code_crctr %in% c("FB", "FE", "FP"), "FnM", 
-                             ifelse(code_crctr %in% c("Ur", "Pt"), "UrP", code_crctr))) %>%
+                             ifelse(code_crctr %in% c("Ur", "Pt", "Mi"), "UrP", 
+                                    ifelse(code_crctr %in% c("Mf", "S"), "Mf", code_crctr)))) %>%
     group_by(code_new) %>%
     summarize(area_rai = sum(AREA_RAI))
   )
@@ -100,7 +101,7 @@ st_write(mg2014_albers, paste0(out_dir, "shapefiles/mg2014_102028.shp"), append 
 #
 # The outputs of the file are four rasters that exactly align: SOC, AGB, 2000 LULC, & 2014 LULC
 
-source("./scripts/resample_raster.sh")
+system("bash ./scripts/resample_rasters.sh")
 
 #---------------------------------
 
@@ -108,9 +109,11 @@ source("./scripts/resample_raster.sh")
 ## Extract districts w/ mangroves ##
 ####################################
 
+library(sf)
+library(tidyverse)
 
 districts <- st_read(paste0(raw_dir, "shapefiles/tha_admbnda_adm2_rtsd_20190221.shp"))
-mg2000 <- st_transform(st_read(paste0(in_dir, "shapefiles/MG_TYPE_43.shp")), 4326)
+mg2000 <- st_transform(st_read(paste0(raw_dir, "shapefiles/MG_TYPE_43.shp")), 4326)
 
 intersections <- st_intersects(districts, mg2000)
 districts_mg <- districts[lengths(intersections) > 0, ]
@@ -118,7 +121,8 @@ districts_mg <- districts[lengths(intersections) > 0, ]
 plot(districts_mg["ADM1_EN"])
 plot(mg2000["CODE"], add = T)
 
-st_write(districts_mg, dsn = paste0(out_dir, "shapefiles/districts_mg"), layer = "districts_mg", driver = "ESRI Shapefile")
+st_write(districts_mg, dsn = paste0(out_dir, "shapefiles/districts_mg"), 
+         layer = "districts_mg", driver = "ESRI Shapefile", append = FALSE)
 
 #-----------------------------
 # Courtesy clean-up.

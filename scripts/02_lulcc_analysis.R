@@ -45,6 +45,7 @@ ct_df_ha <- ct_df * 937 / 10000 / 1000
 ct_df_ha$ttl <- rowSums(ct_df_ha)
 ct_df_ha <- rbind(ct_df_ha, colSums(ct_df_ha))
 
+write_csv(ct_df_ha, "~/Desktop/dat.csv")
 
 #-----------------------------
 # Cross-tabling of rasterized DMCR data at the province scale
@@ -62,11 +63,11 @@ loss_codes <- data.frame(district = NA, code = factor(c(1, 2, 3, 4, 5, 7, 8, 9, 
 gain_codes <- data.frame(district = NA, code = factor(c(1, 2, 3, 4, 5, 6, 7, 9, 10, NA)))
 
 losses <- data.frame(district = NA, aquaculture = NA, agriculture = NA, mangrove = NA,
-                     other_forest = NA, mudflats = NA, abandoned = NA, sand = NA, 
+                     other_forest = NA, mudflats = NA, abandoned = NA, 
                      salt_farms = NA, urban = NA, water = NA, nodata = NA)
 
 gains <- data.frame(district = NA, aquaculture = NA, agriculture = NA, mangrove = NA,
-                    other_forest = NA, mudflats = NA, mines = NA, abandoned = NA,
+                    other_forest = NA, mudflats = NA, abandoned = NA,
                     salt_farms = NA, urban = NA, nodata = NA)
 
 for(i in 1:nrow(dstrcts)) {
@@ -107,7 +108,7 @@ for(i in 1:nrow(dstrcts)) {
 losses <- losses %>%
   left_join(dstrct_df, by = c("district" = "ADM2_ID")) %>%
   select(ADM2_ID = district, ADM2_EN, ADM1_EN, aquaculture, agriculture,
-         mangrove, other_forest, mudflats, abandoned, sand, salt_farms,
+         mangrove, other_forest, mudflats, abandoned, salt_farms,
          urban, water, nodata)
 
 losses_total <- losses %>% 
@@ -121,7 +122,6 @@ losses_total <- losses %>%
     other_forest = sum(other_forest, na.rm = T),
     mudflats = sum(mudflats, na.rm = T),
     abandoned = sum(abandoned, na.rm = T),
-    sand = sum(sand, na.rm = T),
     salt_farms = sum(salt_farms, na.rm = T),
     urban = sum(urban, na.rm = T),
     water = sum(water, na.rm = T),
@@ -135,7 +135,7 @@ dstrct_losses <- bind_rows(losses, losses_total)
 gains <- gains %>%
   left_join(dstrct_df, by = c("district" = "ADM2_ID")) %>%
   select(ADM2_ID = district, ADM2_EN, ADM1_EN, aquaculture, agriculture,
-         mangrove, other_forest, mudflats, mines, abandoned, salt_farms, 
+         mangrove, other_forest, mudflats, abandoned, salt_farms, 
          urban, nodata)
 
 gains_total <- gains %>% 
@@ -148,7 +148,6 @@ gains_total <- gains %>%
     mangrove = sum(mangrove, na.rm = T),
     other_forest = sum(other_forest, na.rm = T),
     mudflats = sum(mudflats, na.rm = T),
-    mines = sum(mines, na.rm = T),
     abandoned = sum(abandoned, na.rm = T),
     salt_farms = sum(salt_farms, na.rm = T),
     urban = sum(urban, na.rm = T),
@@ -177,13 +176,13 @@ dstrct_gains_ha[, 4:13] <- round(dstrct_gains[, 4:13] * pxlSize / 10000, 2)
 dstrcts_loss_sf <- dstrcts %>%
   left_join(dstrct_losses_ha, by = c("ADM1_EN", "ADM2_ID", "ADM2_EN")) %>%
   dplyr::select(ADM1_EN, ADM2_ID, ADM2_EN, aquaculture, agriculture, mangrove,
-                other_forest, mudflats, abandoned, sand, salt_farms, urban, 
+                other_forest, mudflats, abandoned, salt_farms, urban, 
                 water, nodata, geometry)
 
 dstrcts_gain_sf <- dstrcts %>%
   left_join(dstrct_gains_ha, by = c("ADM1_EN", "ADM2_ID", "ADM2_EN")) %>%
   dplyr::select(ADM1_EN, ADM2_ID, ADM2_EN, aquaculture, agriculture, mangrove, 
-                other_forest, mudflats, mines, abandoned, salt_farms, urban,
+                other_forest, mudflats, abandoned, salt_farms, urban,
                 nodata, geometry)
   
 
