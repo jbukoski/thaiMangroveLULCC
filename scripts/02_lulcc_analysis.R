@@ -17,6 +17,7 @@ print("Running Step 2. land use and land cover change analysis...")
 #-----------------------------
 # Load necessary libraries
 
+library(magrittr)
 library(raster)
 library(rgdal)
 library(sf)
@@ -30,22 +31,33 @@ raw_dir <- "./data/raw/"
 proc_dir <- "./data/processed/"
 table_dir <- "./tables/"
 
-#-----------------------------
-# Cross-tabling of rasterized DMCR data at a national scale
-
 mg2000 <- raster(paste0(proc_dir, "rasters/mg2000.tif"))
 mg2014 <- raster(paste0(proc_dir, "rasters/mg2014.tif"))
+
+#-----------------------------
+# Cross-tabling of rasterized DMCR data at a national scale
 
 ct <- crosstab(mg2000, mg2014, useNA = T)
 ct_df <- as.data.frame.matrix(ct)
 
 # Compute numbers in thousands of hectares
 
-ct_df_ha <- ct_df * 937 / 10000 / 1000
+ct_df_ha <- (ct_df * 937 / 10000 / 1000)
+ct_df_ha[nrow(ct_df_ha), ncol(ct_df_ha)] <- 0
 ct_df_ha$ttl <- rowSums(ct_df_ha)
-ct_df_ha <- rbind(ct_df_ha, colSums(ct_df_ha))
 
-write_csv(ct_df_ha, "~/Desktop/dat.csv")
+new_row <- tibble(ct_df_ha[1, ])* 0
+
+clean_ct <- round(bind_rows(ct_df_ha[1:8,], new_row, ct_df_ha[9,]), 1) %>%
+  rbind(colSums(.)) %>%
+  set_colnames(c("Aquaculture", "Agriculture", "Mangroves", "Other Forest",
+                 "Mudflats", "Abandoned Land", "Salt Farms", "Developed Areas", 
+                 "Water", "NA", "Totals (2000)")) %>%
+  set_rownames(c("Aquaculture", "Agriculture", "Mangroves", "Other Forest",
+                 "Mudflats", "Abandoned Land", "Salt Farms", "Developed Areas", 
+                 "Water", "NA", "Totals (2014)"))
+
+write_csv(clean_ct, "./data/processed/clean_lulcc_results.csv")
 
 #-----------------------------
 # Cross-tabling of rasterized DMCR data at the province scale
@@ -59,16 +71,16 @@ st_geometry(dstrct_df) <- NULL
 
 # Set up data frames to write to with for loop.
 
-loss_codes <- data.frame(district = NA, code = factor(c(1, 2, 3, 4, 5, 7, 8, 9, 10, 11, NA)))
-gain_codes <- data.frame(district = NA, code = factor(c(1, 2, 3, 4, 5, 6, 7, 9, 10, NA)))
+loss_codes <- data.frame(district = NA, code = factor(c(1, 2, 3, 4, 5, 6, 7, 8, 9, NA)))
+gain_codes <- data.frame(district = NA, code = factor(c(1, 2, 3, 4, 5, 6, 7, 8, 9, NA)))
 
 losses <- data.frame(district = NA, aquaculture = NA, agriculture = NA, mangrove = NA,
-                     other_forest = NA, mudflats = NA, abandoned = NA, 
-                     salt_farms = NA, urban = NA, water = NA, nodata = NA)
+                     other_forest = NA, mudflats = NA, abandoned = NA, salt_farms = NA, 
+                     urban = NA, water = NA, nodata = NA)
 
 gains <- data.frame(district = NA, aquaculture = NA, agriculture = NA, mangrove = NA,
-                    other_forest = NA, mudflats = NA, abandoned = NA,
-                    salt_farms = NA, urban = NA, nodata = NA)
+                    other_forest = NA, mudflats = NA, abandoned = NA, salt_farms = NA, 
+                    urban = NA, water = NA, nodata = NA)
 
 for(i in 1:nrow(dstrcts)) {
   
@@ -168,10 +180,10 @@ epsg102028 <- CRS("+proj=aea +lat_1=7 +lat_2=-32 +lat_0=-15 +lon_0=125
 pxlSize <- 927 # Hard code it to save time, but lines above produce same result
 
 dstrct_losses_ha <- dstrct_losses
-dstrct_losses_ha[, 4:14] <- round(dstrct_losses[, 4:14] * pxlSize / 10000, 2)
+dstrct_losses_ha[, 4:13] <- round(dstrct_losses[, 4:13] * pxlSize / 10000, 2)
 
 dstrct_gains_ha <- dstrct_gains
-dstrct_gains_ha[, 4:13] <- round(dstrct_gains[, 4:13] * pxlSize / 10000, 2)
+dstrct_gains_ha[, 4:12] <- round(dstrct_gains[, 4:12] * pxlSize / 10000, 2)
 
 dstrcts_loss_sf <- dstrcts %>%
   left_join(dstrct_losses_ha, by = c("ADM1_EN", "ADM2_ID", "ADM2_EN")) %>%
@@ -188,30 +200,46 @@ dstrcts_gain_sf <- dstrcts %>%
 
 # Write out to file
 
-st_write(dstrcts_loss_sf, dsn = paste0(proc_dir, "shapefiles/dstrct_losses_2014"), layer = "dstrct_losses_2014", driver = "ESRI Shapefile")
-st_write(dstrcts_gain_sf, dsn = paste0(proc_dir, "shapefiles/dstrct_gains_2014"), layer = "dstrct_gains_2014", driver = "ESRI Shapefile")
+st_write(dstrcts_loss_sf, dsn = paste0(proc_dir, "shapefiles/dstrct_losses_2014"), 
+         layer = "dstrct_losses_2014", driver = "ESRI Shapefile", append = FALSE)
+
+st_write(dstrcts_gain_sf, dsn = paste0(proc_dir, "shapefiles/dstrct_gains_2014"), 
+         layer = "dstrct_gains_2014", driver = "ESRI Shapefile", append = FALSE)
 
 rm(list = ls())
 
 #----------------------------------
 # Calculate losses in historically forested mangrove regions (1960 - 2000)
 
+# Define Directories
+
+raw_dir <- "./data/raw/"
+proc_dir <- "./data/processed/"
+table_dir <- "./tables/"
+
+
 mg2000 <- raster(paste0(proc_dir, "rasters/mg2000.tif"))
+mg2014 <- raster(paste0(proc_dir, "rasters/mg2014.tif"))
 
 dstrcts <- read_sf(paste0(proc_dir, "shapefiles/districts_mg")) %>%
   mutate(ADM2_ID = row_number()) %>%
   dplyr::select(ADM1_EN, ADM2_ID, ADM2_EN)
 
-loss_codes_00 <- data.frame(district = NA, code = c(1, 2, 3, 4, 5, 6, 7, 9, 10))
-loss_codes_14 <- data.frame(district = NA, code = c(1, 2, 3, 4, 5, 7, 8, 9, 10, 11))
+dstrct_df <- dstrcts 
+st_geometry(dstrct_df) <- NULL
+
+
+loss_codes_00 <- data.frame(district = NA, code = c(1:9))
+loss_codes_14 <- data.frame(district = NA, code = c(1:9))
 
 losses_2000 <- data.frame(district = NA, aquaculture = NA, agriculture = NA, mangrove = NA,
-                          other_forest = NA, mudflats = NA, mines = NA, abandoned = NA,
-                          salt_farms = NA, urban = NA)
+                          other_forest = NA, mudflats = NA, abandoned = NA, salt_farms = NA,
+                          urban = NA, water = NA)
 
 losses_2014 <- data.frame(district = NA, aquaculture = NA, agriculture = NA, mangrove = NA,
-                          other_forest = NA, mudflats = NA, abandoned = NA, sand = NA,
-                          salt_farms = NA, urban = NA, water = NA)
+                          other_forest = NA, mudflats = NA, abandoned = NA, salt_farms = NA,
+                          urban = NA, water = NA)
+
 
 areaRaster <- area(mg2000)
 
@@ -246,13 +274,12 @@ for(i in 1:nrow(dstrcts)) {
 losses_00 <- losses_2000 %>%
   left_join(dstrct_df, by = c("district" = "ADM2_ID")) %>%
   select(ADM2_ID = district, ADM2_EN, ADM1_EN, aquaculture, agriculture,
-         mangrove, other_forest, mudflats, mines, abandoned, salt_farms, urban)
+         mangrove, other_forest, mudflats, abandoned, salt_farms, urban)
 
 losses_14 <- losses_2014 %>%
   left_join(dstrct_df, by = c("district" = "ADM2_ID")) %>%
   select(ADM2_ID = district, ADM2_EN, ADM1_EN, aquaculture, agriculture,
-         mangrove, other_forest, mudflats, abandoned, sand, salt_farms, urban,
-         water)
+         mangrove, other_forest, mudflats, abandoned, salt_farms, urban, water)
 
 losses_ttl_00 <- losses_00 %>% 
   summarize(ADM2_ID = 9999, ADM2_EN = "Total", ADM1_EN = "all",
@@ -261,7 +288,6 @@ losses_ttl_00 <- losses_00 %>%
             mangrove = sum(mangrove, na.rm = T),
             other_forest = sum(other_forest, na.rm = T),
             mudflats = sum(mudflats, na.rm = T),
-            mines = sum(mines, na.rm = T),
             abandoned = sum(abandoned, na.rm = T),
             salt_farms = sum(salt_farms, na.rm = T),
             urban = sum(urban, na.rm = T))
@@ -274,7 +300,6 @@ losses_ttl_14 <- losses_14 %>%
             other_forest = sum(other_forest, na.rm = T),
             mudflats = sum(mudflats, na.rm = T),
             abandoned = sum(abandoned, na.rm = T),
-            sand = sum(sand, na.rm = T),
             salt_farms = sum(salt_farms, na.rm = T),
             urban = sum(urban, na.rm = T),
             water = sum(water, na.rm = T))
@@ -283,13 +308,13 @@ losses_ttl_14 <- losses_14 %>%
 dstrct_ttls_2000 <- bind_rows(losses_00, losses_ttl_00) %>%
   rowwise() %>%
   mutate(total = sum(aquaculture, agriculture, mangrove, other_forest, mudflats, 
-                     mines, abandoned, salt_farms, urban, na.rm = T)) %>%
+                     abandoned, salt_farms, urban, na.rm = T)) %>%
   ungroup()
 
 dstrct_ttls_2014 <- bind_rows(losses_14, losses_ttl_14) %>%
   rowwise() %>%
   mutate(total = sum(aquaculture, agriculture, mangrove, other_forest, mudflats, 
-                     abandoned, sand, salt_farms, urban, water, na.rm = T)) %>%
+                     abandoned, salt_farms, urban, water, na.rm = T)) %>%
   ungroup()
 
 # Convert to an SF object and clean up.
@@ -298,16 +323,24 @@ dstrct_ttls_2000_sf <- dstrcts %>%
   left_join(dstrct_ttls_2000, by = c("ADM1_EN", "ADM2_ID", "ADM2_EN")) %>%
   arrange(ADM1_EN, ADM2_EN) %>%
   dplyr::select(ADM1_EN, ADM2_ID, ADM2_EN, aquaculture, agriculture, mangrove, 
-                other_forest, mudflats, mines, abandoned, salt_farms, urban, total, geometry)
+                other_forest, mudflats, abandoned, salt_farms, urban, total, geometry)
 
 dstrct_ttls_2014_sf <- dstrcts %>%
   left_join(dstrct_ttls_2014, by = c("ADM1_EN", "ADM2_ID", "ADM2_EN")) %>%
   arrange(ADM1_EN, ADM2_EN) %>%
   dplyr::select(ADM1_EN, ADM2_ID, ADM2_EN, aquaculture, agriculture, mangrove, 
-                other_forest, mudflats, abandoned, sand, salt_farms, urban, water, total, geometry)
+                other_forest, mudflats, abandoned, salt_farms, urban, water, total, geometry)
 
 # Write out to file.
 
-st_write(dstrct_ttls_2000_sf, dsn = paste0(proc_dir, "shapefiles/dstrct_ttls_2000"), layer = "dstrct_ttls_2000", driver = "ESRI Shapefile")
-st_write(dstrct_ttls_2014_sf, dsn = paste0(proc_dir, "shapefiles/dstrct_ttls_2014"), layer = "dstrct_ttls_2014", driver = "ESRI Shapefile")
+st_write(dstrct_ttls_2000_sf, dsn = paste0(proc_dir, "shapefiles/dstrct_ttls_2000"), 
+         layer = "dstrct_ttls_2000", driver = "ESRI Shapefile", append = FALSE)
 
+st_write(dstrct_ttls_2014_sf, dsn = paste0(proc_dir, "shapefiles/dstrct_ttls_2014"), 
+         layer = "dstrct_ttls_2014", driver = "ESRI Shapefile", append = FALSE)
+
+#--------------------------------
+# Clean up a bit
+
+rm(list = ls())
+gc()
