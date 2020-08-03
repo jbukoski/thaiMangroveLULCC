@@ -70,31 +70,32 @@ base <- ggplot(data = gadm_sea) +
   ylim(c(5.75, 13.75)) +
   theme_bw() +
   theme(legend.position = "bottom",
-        panel.background = element_rect(fill = "light blue"),
+        panel.background = element_rect(fill = "#C0E3F7"),
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank(),
+        panel.grid.major = element_blank())
 
 p1 <- base +
-  geom_sf(data = mg2014, aes(geometry = geometry, fill = (total - mangrov) / 1000), size = 0.2) +
-  scale_fill_gradient(low = "#ffffff", high = "#228B22") +
-  guides(fill = guide_legend(title = "Mangrove Area (10e3 ha)")) +
+  geom_sf(data = mg2014, aes(geometry = geometry, fill = (total) / 1000), size = 0.2) +
+  scale_fill_gradient(low = "#ffffff", high = "#009E73") +
+  guides(fill = guide_legend(title = "Mangrove Area (kha)")) +
   annotate(geom = "text", label = "a",  x = 103.25, y = 13.5, size = 8, color = "black")
   
 p2 <- base +
   geom_sf(data = mg2014, aes(geometry = geometry, fill = mg_loss), size = 0.2) +
-  scale_fill_gradient(low = "#ffffff", high = "#FF0000") +
+  scale_fill_gradient(low = "#ffffff", high = "#CC79A7") +
   guides(fill = guide_legend(title = "Mangrove Loss (%)")) +
   annotate(geom = "text", label = "b",  x = 103.25, y = 13.5, size = 8, color = "black")
 
 p3 <- base + 
   geom_sf(data = mg2014, aes(geometry = geometry, fill = loss2aqua), size = 0.2) +
-  scale_fill_gradient(low = "#ffffff", high = "#0000FF", breaks=c(0,20,40,60,80,100)) +
+  scale_fill_gradient(low = "#ffffff", high = "#0072B2", breaks=c(0,20,40,60,80,100)) +
   guides(fill = guide_legend(title = "Loss to Aquaculture (%)")) +
   annotate(geom = "text", label = "c",  x = 103.25, y = 13.5, size = 8, color = "black")
 
 p4 <- base +
   geom_sf(data = mg2014, aes(geometry = geometry, fill = loss2agri), size = 0.2) +
-  scale_fill_gradient(low = "#ffffff", high = "#FFAA1D") +
+  scale_fill_gradient(low = "#ffffff", high = "#D55E00") +
   guides(fill = guide_legend(title = "Loss to Agriculture (%)")) +
   annotate(geom = "text", label = "d",  x = 103.25, y = 13.5, size = 8, color = "black")
 
@@ -104,7 +105,6 @@ ggsave("./figs/f1_loss_map.jpg", f1, width = 10.2, height = 13.2, units = c("in"
 
 #--------------------------------
 # Figure 2. District level C Stock estimates.
-
 
 gadm_sea <- st_read(paste0(raw_dir, "shapefiles/gadm_se_asia.shp"))
 
@@ -283,9 +283,11 @@ fig3_growthMdl <- ggplot(dat, aes(yr, agb)) +
   geom_vline(xintercept = 14, linetype = "dashed", color = "red") +
   theme_tufte() +
   theme(panel.grid.minor = element_blank(),
-        panel.grid.major = element_blank())
+        panel.grid.major = element_blank(),
+        axis.title.x = element_text(family = "sans"),
+        axis.title.y = element_text(family = "sans"))
 
-ggsave("./figs/fig2_growth.jpg", fig3_growthMdl, width = 8, height = 5, units = c("in"), device = "jpeg")
+ggsave("./figs/fig2_growth.jpg", fig3_growthMdl, width = 6, height = 4, units = c("in"), device = "jpeg")
 
 
 #----------------------------------------
@@ -342,7 +344,8 @@ levels(dat2plt$gain) = list(High="hgh", Medium="med", Low="low")
 fig4 <- dat2plt %>%
   ggplot() +
   facet_wrap(. ~ loss, ncol = 3) + 
-  geom_bar(aes(x = gain, y = ttl, fill = loss), alpha = 0.8, width = 0.7, stat = "identity") +
+  #geom_bar(aes(x = gain, y = ttl, fill = loss), alpha = 0.8, width = 0.7, stat = "identity") +
+  geom_point(aes(x = gain, y = ttl, col = loss), fill = NA, stat = "identity", size = 3, shape = 19) +
   geom_errorbar(aes(x = gain, ymin = ttl - ttl_sd, ymax = ttl + ttl_sd, col = loss), alpha = 0.8, width = .2, position = position_dodge(.9)) +
   ylab("Total Emissions, 2000-2014 (Million Mg C)") +
   xlab("Rate of C Stock Gain") +
@@ -361,4 +364,4 @@ fig4 <- dat2plt %>%
         axis.title.y = element_text(margin=margin(0, 0, 0, 5)))
 
 
-ggsave("./figs/fig4_assumptions.jpg", fig4, width = 8, height = 6, units = c("in"), device = "jpeg")
+ggsave("./figs/fig4_assumptions.jpg", fig4, width = 6, height = 4, units = c("in"), device = "jpeg")
