@@ -227,6 +227,9 @@ calcCarbon <- function(sf_obj, agb_rate, soc_rate) {
   
 }
 
+
+
+
 # Calculate high, medium and low loss rates
 
 mg2000_hls <- calcCarbon(mg2000, agb_rate = 1, soc_rate = 0.67)
@@ -237,27 +240,27 @@ mg2014_hls <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67)
 mg2014_mls <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54)
 mg2014_lls <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41)
 
-mg2014_hgn <- calcCarbon(mg2014_gn, agb_rate = 0.65, soc_rate = 0.19)
-mg2014_mgn <- calcCarbon(mg2014_gn, agb_rate = 0.40, soc_rate = 0.1)
-mg2014_lgn <- calcCarbon(mg2014_gn, agb_rate = 0.24, soc_rate = 0.05)
+mg2014_hgn <- calcCarbon(mg2014_gn, agb_rate = 0.65, soc_rate = 0.43)
+mg2014_mgn <- calcCarbon(mg2014_gn, agb_rate = 0.40, soc_rate = 0.21)
+mg2014_lgn <- calcCarbon(mg2014_gn, agb_rate = 0.24, soc_rate = 0.08)
 
 # High loss, varying gains for 2000 - 2014
 
-mg2014_hls_hgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.65, soc_rate = 0.19)
-mg2014_hls_mgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.40, soc_rate = 0.1)
-mg2014_hls_lgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.24, soc_rate = 0.05)
+mg2014_hls_hgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.65, soc_rate = 0.43)
+mg2014_hls_mgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.40, soc_rate = 0.21)
+mg2014_hls_lgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.24, soc_rate = 0.08)
 
 # Medium loss, varying gains for 2000 - 2014
 
-mg2014_mls_hgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.65, soc_rate = 0.19)
-mg2014_mls_mgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.40, soc_rate = 0.1)
-mg2014_mls_lgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.24, soc_rate = 0.05)
+mg2014_mls_hgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.65, soc_rate = 0.43)
+mg2014_mls_mgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.40, soc_rate = 0.21)
+mg2014_mls_lgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.24, soc_rate = 0.08)
 
 # Low loss, varying gains for 2000 - 2014
 
-mg2014_lls_hgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.65, soc_rate = 0.19)
-mg2014_lls_mgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.40, soc_rate = 0.1)
-mg2014_lls_lgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.24, soc_rate = 0.05)
+mg2014_lls_hgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.65, soc_rate = 0.43)
+mg2014_lls_mgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.40, soc_rate = 0.21)
+mg2014_lls_lgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.24, soc_rate = 0.08)
 
 carbonTable <- rbind(mg2000_hls, mg2000_mls, mg2000_lls,
                      mg2014_hls, mg2014_mls, mg2014_lls,
