@@ -61,6 +61,19 @@ soc <- raster(paste0(raw_dir, "rasters/Mangrove_soc_Thailand.tif"))
 agb <- raster(paste0(raw_dir, "rasters/Mangrove_agb_Thailand.tif"))
 
 #--------------------------------
+# Calculate new RMSE for biomass model data based on Thai site data
+
+c_dat <- read_csv(paste0(in_dir, "fld_v_mdl_plots.csv"), col_types = cols()) %>%
+  filter(level == "subplot")
+
+thai_dat <- c_dat %>%
+  filter(site %in% c("Krabi", "Nakorn", "Trang")) %>%
+  select(agc_mdl, agc_fld) %>%
+  drop_na(agc_mdl)
+
+agb_thai_rmse <- Metrics::rmse(thai_dat$agc_fld, thai_dat$agc_mdl)
+
+
 # Derive average soc and biomass values for each district
 
 dstrcts$ADM2_ID <- 1:nrow(dstrcts)
@@ -68,40 +81,80 @@ dstrcts <- dplyr::select(dstrcts, ADM1_EN, ADM2_EN, ADM2_ID, geometry)
 dstrcts_sp <- as(dstrcts, "Spatial")
 
 dstrct_avgs <- data.frame("ADM2_ID" = 1:nrow(dstrcts_sp), 
-                          "SOC_AVG" = NA, "SOC_SD" = NA,
-                          "AGB_AVG" = NA, "AGB_SD" = NA)
+                          "SOC_AVG" = NA, "SOC_SE" = NA,
+                          "AGB_AVG" = NA, "AGB_SE" = NA)
 
-agb_rmse <- 148.0   # Cross-validation RMSE value reported for SE Asia in Simard et al., 2019 SI File (rather high!)
-soc_rmse <- 10.9    # Cross-validation RMSE value reported in Sanderman et al., 2018
+agb_rmse <- 148.0 * 0.47  # Cross-validation RMSE value reported for SE Asia in Simard et al., 2019 SI File (rather high!)
+soc_rmse <- 109.0    # Cross-validation RMSE value reported in Sanderman et al., 2018
 
 for(i in 1:nrow(dstrcts_sp)) {
-      
+  
   shp <- dstrcts_sp[i, ]
-    
   soc_crop <- crop(soc, shp)
   soc_dat <- raster::extract(soc_crop, shp, df = T)
   
-  dstrct_avgs$SOC_AVG[i] <- mean(soc_dat$Mangrove_soc_Thailand, na.rm = T)
-  dstrct_soc_sd <- sd(soc_dat$Mangrove_soc_Thailand, na.rm = T)
+  means <- c()
   
-  dstrct_avgs$SOC_SD[i] <- sqrt(dstrct_soc_sd^2 + soc_rmse^2)
+  for(j in 1:100) {
+    
+    soc_mean <- mean(soc_dat$Mangrove_soc_Thailand, na.rm = T)
+    soc_sd <- sqrt(sd(soc_dat$Mangrove_soc_Thailand, na.rm = T)^2 + soc_rmse^2)
+    
+    if(!is.na(soc_mean)) {
+      
+      sim_soc <- rnorm(100, mean = mean(soc_dat$Mangrove_soc_Thailand, na.rm = T), sd = soc_sd)
+      sim_soc <- sim_soc[sim_soc > 0]
+      gammaParams <- egamma(sim_soc)
+      means[j] <- mean(stats::rgamma(100, shape = gammaParams$parameters[1], scale = gammaParams$parameters[2]))  
+      
+    } else {
+
+      means <- NA
+      
+    }
+    
+  }
   
-  rm(soc_dat, soc_crop)
+  dstrct_avgs$SOC_AVG[i] <- mean(means)
+  dstrct_avgs$SOC_SE[i] <- plotrix::std.error(means)
+  
+  rm(soc_dat, soc_crop, means)
   gc()
   
 }
 
+
+
 for(i in 1:nrow(dstrcts_sp)) {
   
   shp <- dstrcts_sp[i, ]
-  
   agb_crop <- crop(agb, shp)
   agb_dat <- raster::extract(agb_crop, shp, df = T)
   
-  dstrct_avgs$AGB_AVG[i] <- mean(agb_dat$Mangrove_agb_Thailand, na.rm = T)
-  dstrct_agb_sd <- sd(agb_dat$Mangrove_agb_Thailand, na.rm = T)
+  means <- c()
   
-  dstrct_avgs$AGB_SD[i] <- sqrt(dstrct_agb_sd^2 + agb_rmse^2)
+  for(j in 1:100) {
+    
+    soc_mean <- mean(soc_dat$Mangrove_soc_Thailand, na.rm = T)
+    soc_sd <- sqrt(sd(soc_dat$Mangrove_soc_Thailand, na.rm = T)^2 + soc_rmse^2)
+    
+    if(!is.na(soc_mean)) {
+      
+      sim_soc <- rnorm(100, mean = mean(soc_dat$Mangrove_soc_Thailand, na.rm = T), sd = soc_sd)
+      sim_soc <- sim_soc[sim_soc > 0]
+      gammaParams <- egamma(sim_soc)
+      means[j] <- mean(stats::rgamma(100, shape = gammaParams$parameters[1], scale = gammaParams$parameters[2]))  
+      
+    } else {
+      
+      means <- NA
+      
+    }
+    
+  }
+  
+  dstrct_avgs$AGB_AVG[i] <- mean(agb_means)
+  dstrct_avgs$AGB_SE[i] <- plotrix::std.error(agb_means)
   
   rm(agb_crop, agb_dat)
   gc()
@@ -114,17 +167,17 @@ dstrcts_c <- dstrcts_sp %>%
   arrange(ADM1_EN, ADM2_EN) %>%
   group_by(ADM1_EN) %>%
   mutate(SOC_AVG = ifelse(is.nan(SOC_AVG), mean(SOC_AVG, na.rm = T), SOC_AVG),
-         SOC_SD = ifelse(is.na(SOC_SD), sqrt(sum(SOC_SD^2, na.rm = T)), SOC_SD),
+         SOC_SE = ifelse(is.na(SOC_SE), sqrt(sum(SOC_SE^2, na.rm = T)), SOC_SE),
          AGB_AVG = ifelse(is.nan(AGB_AVG), mean(AGB_AVG, na.rm = T), AGB_AVG),
-         AGB_SD = ifelse(is.na(AGB_SD), sqrt(sum(AGB_SD^2, na.rm = T)), AGB_SD)) %>%
+         AGB_SE = ifelse(is.na(AGB_SE), sqrt(sum(AGB_SE^2, na.rm = T)), AGB_SE)) %>%
   ungroup() %>%
   rowwise() %>%
   mutate(ECO_AVG = sum(AGB_AVG, SOC_AVG),
-         ECO_SD = sqrt(sum(AGB_SD^2, SOC_SD^2))) %>%
+         ECO_SE = sqrt(sum(AGB_SE^2, SOC_SE^2))) %>%
   ungroup() %>%
   st_as_sf() %>%
-  dplyr::select(ADM1_EN, ADM2_EN, ADM2_ID, AGB_AVG, AGB_SD, SOC_AVG, SOC_SD,
-                ECO_AVG, ECO_SD, geometry)
+  dplyr::select(ADM1_EN, ADM2_EN, ADM2_ID, AGB_AVG, AGB_SE, SOC_AVG, SOC_SE,
+                ECO_AVG, ECO_SE, geometry)
 
 st_write(dstrcts_c, dsn = paste0(proc_dir, "shapefiles/dstrcts_c"), 
          layer = "dstrcts_c", driver = "ESRI Shapefile", append = FALSE)
@@ -276,31 +329,31 @@ carbonTable <- rbind(mg2000_hls, mg2000_mls, mg2000_lls,
          ttl_sd = (aqua_c_sd + agri_c_sd + abnd_c_sd + salt_c_sd + urbn_c_sd) / 1000000)
 
 smryDat2000 <- carbonTable[1:9, ] %>%
-  select(year, loss, gain, ttl, ttl_sd)
+  dplyr::select(year, loss, gain, ttl, ttl_sd)
 
 smryDat2014 <- carbonTable[10:18, ] %>%
-  select(year, loss, gain, ttl, ttl_sd)
+  dplyr::select(year, loss, gain, ttl, ttl_sd)
 
 
 # Calculate net change for comparison
 
 mg2000_df <- mg2000 %>%
   st_set_geometry(NULL) %>%
-  select(ADM2_EN, mangrov)
+  dplyr::select(ADM2_EN, mangrov)
 
 mg2014_df <- mg2014 %>%
   st_set_geometry(NULL) %>%
-  select(ADM2_EN, mangrov)
+  dplyr::select(ADM2_EN, mangrov)
 
 net <- mg2014_df %>%
   left_join(mg2000_df, by = "ADM2_EN", suffix = c("_14", "_00")) %>%
   replace(is.na(.), 0) %>%
   mutate(mangrov_net = mangrov_14 - mangrov_00) %>%
-  select(ADM2_EN, mangrov_net) %>%
+  dplyr::select(ADM2_EN, mangrov_net) %>%
   left_join(dstrcts_c_df, by = c("ADM2_EN")) %>%
   mutate(net_mg_c_ls = (mangrov_net * AGB_AVG * 0.82) + (mangrov_net * SOC_AVG * 0.54),
          net_mg_c_ls_sd = (mangrov_net * AGB_SD * 0.82) + (mangrov_net * SOC_SD * 0.54)) %>%
-  select(ADM2_EN, net_mg_c_ls, net_mg_c_ls_sd)
+  dplyr::select(ADM2_EN, net_mg_c_ls, net_mg_c_ls_sd)
 
 net_total <- sum(net$net_mg_c_ls / 1000000)
 net_total_sd <- sum(net$net_mg_c_ls_sd / 1000000)

@@ -14,6 +14,8 @@ library(ggmap)
 library(ggpubr)
 library(grid)
 library(gridExtra)
+library(ggsn)
+library(ggspatial)
 library(ggthemes)
 library(raster)
 library(rasterVis)
@@ -48,7 +50,7 @@ ggplot(dat, aes(x = Year, y = Extent_ha)) +
   
   
 #---------------------------------------
-# Figure 1. Mangrove loss by 1960 - 2014
+# Figure 1. Mangrove loss, 1960 - 2014
   
 gadm_sea <- st_read(paste0(raw_dir, "shapefiles/gadm_se_asia.shp"))
   
@@ -66,44 +68,60 @@ mg2014 <- st_read(paste0(proc_dir, "shapefiles/dstrct_ttls_2014")) %>%
 base <- ggplot(data = gadm_sea) +
   geom_sf(fill = "#F5F5F5", size  = 0.1) +
   geom_sf(data = tha, fill = "#E8E8E8", size = 0.2) +
-  xlim(c(97.5, 103.5)) +
-  ylim(c(5.75, 13.75)) +
+  ylim(c(6, 14)) +
+  scale_x_continuous(breaks = c(97, 99, 101, 103), limits = c(97, 103)) +
   theme_bw() +
   theme(legend.position = "bottom",
         panel.background = element_rect(fill = "#C0E3F7"),
         axis.title.x = element_blank(),
         axis.title.y = element_blank(),
-        panel.grid.major = element_blank())
+        panel.grid.major = element_blank(),
+        axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12)) +
+  annotation_north_arrow(style = north_arrow_orienteering(
+    text_col = "#C0E3F7", fill = c("#838383", "#838383"),
+    line_col = "#838383", text_size = -10),
+    height = unit(0.7, "cm"), width = unit(0.5, "cm"),
+    pad_x = unit(0.8, "cm"), pad_y = unit(1.5, "cm")) +
+  ggsn::scalebar(x.min = 97, x.max = 103,
+                 y.min = 6, y.max = 14,
+                 location = "bottomleft",
+                 box.color = "#838383",
+                 box.fill = c("#838383", "white"),
+                 dist = 75, dist_unit = "km", height = 0.015,
+                 st.bottom = FALSE, st.color = "#838383",
+                 st.size = 3, border.size = 0.2,
+                 transform = TRUE, model = "WGS84")
 
 p1 <- base +
   geom_sf(data = mg2014, aes(geometry = geometry, fill = (total) / 1000), size = 0.2) +
   scale_fill_gradient(low = "#ffffff", high = "#009E73") +
   guides(fill = guide_legend(title = "Mangrove Area (kha)")) +
-  annotate(geom = "text", label = "a",  x = 103.25, y = 13.5, size = 8, color = "black")
+  annotate(geom = "text", label = "a",  x = 97.1, y = 14, size = 8, color = "black")
   
 p2 <- base +
   geom_sf(data = mg2014, aes(geometry = geometry, fill = mg_loss), size = 0.2) +
   scale_fill_gradient(low = "#ffffff", high = "#CC79A7") +
   guides(fill = guide_legend(title = "Mangrove Loss (%)")) +
-  annotate(geom = "text", label = "b",  x = 103.25, y = 13.5, size = 8, color = "black")
+  annotate(geom = "text", label = "b",  x = 97.1, y = 14, size = 8, color = "black")
 
 p3 <- base + 
   geom_sf(data = mg2014, aes(geometry = geometry, fill = loss2aqua), size = 0.2) +
   scale_fill_gradient(low = "#ffffff", high = "#0072B2", breaks=c(0,20,40,60,80,100)) +
   guides(fill = guide_legend(title = "Loss to Aquaculture (%)")) +
-  annotate(geom = "text", label = "c",  x = 103.25, y = 13.5, size = 8, color = "black")
+  annotate(geom = "text", label = "c",  x = 97.1, y = 14, size = 8, color = "black")
 
 p4 <- base +
   geom_sf(data = mg2014, aes(geometry = geometry, fill = loss2agri), size = 0.2) +
   scale_fill_gradient(low = "#ffffff", high = "#D55E00") +
   guides(fill = guide_legend(title = "Loss to Agriculture (%)")) +
-  annotate(geom = "text", label = "d",  x = 103.25, y = 13.5, size = 8, color = "black")
+  annotate(geom = "text", label = "d",  x = 97.1, y = 14, size = 8, color = "black")
 
 f1 <- grid.arrange(p1, p2, p3, p4, nrow = 2)
 
 ggsave("./figs/f1_loss_map.jpg", f1, width = 10.2, height = 13.2, units = c("in"), device = "jpeg")
 
-#--------------------------------
+  #--------------------------------
 # Figure 2. District level C Stock estimates.
 
 gadm_sea <- st_read(paste0(raw_dir, "shapefiles/gadm_se_asia.shp"))
