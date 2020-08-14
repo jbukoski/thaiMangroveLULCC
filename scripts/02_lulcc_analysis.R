@@ -89,7 +89,10 @@ for(i in 1:nrow(dstrcts)) {
   mg2000_crp <- crop(mg2000, dstrct)
   mg2014_crp <- crop(mg2014, dstrct)
   
-  ct <- crosstab(mg2000_crp, mg2014_crp, useNA = T)
+  mg2000_msk <- mask(mg2000_crp, dstrct)
+  mg2014_msk <- mask(mg2014_crp, dstrct)
+  
+  ct <- crosstab(mg2000_msk, mg2014_msk, useNA = T)
   ct_df <- data.frame(ct)
   
   ct_loss <- filter(ct_df, mg2000 == 3)
@@ -148,7 +151,7 @@ gains <- gains %>%
   left_join(dstrct_df, by = c("district" = "ADM2_ID")) %>%
   select(ADM2_ID = district, ADM2_EN, ADM1_EN, aquaculture, agriculture,
          mangrove, other_forest, mudflats, abandoned, salt_farms, 
-         urban, nodata)
+         urban, water, nodata)
 
 gains_total <- gains %>% 
   summarize(
@@ -183,7 +186,7 @@ dstrct_losses_ha <- dstrct_losses
 dstrct_losses_ha[, 4:13] <- round(dstrct_losses[, 4:13] * pxlSize / 10000, 2)
 
 dstrct_gains_ha <- dstrct_gains
-dstrct_gains_ha[, 4:12] <- round(dstrct_gains[, 4:12] * pxlSize / 10000, 2)
+dstrct_gains_ha[, 4:13] <- round(dstrct_gains[, 4:13] * pxlSize / 10000, 2)
 
 dstrcts_loss_sf <- dstrcts %>%
   left_join(dstrct_losses_ha, by = c("ADM1_EN", "ADM2_ID", "ADM2_EN")) %>%
@@ -195,7 +198,7 @@ dstrcts_gain_sf <- dstrcts %>%
   left_join(dstrct_gains_ha, by = c("ADM1_EN", "ADM2_ID", "ADM2_EN")) %>%
   dplyr::select(ADM1_EN, ADM2_ID, ADM2_EN, aquaculture, agriculture, mangrove, 
                 other_forest, mudflats, abandoned, salt_farms, urban,
-                nodata, geometry)
+                water, nodata, geometry)
   
 
 # Write out to file
