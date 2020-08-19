@@ -271,7 +271,7 @@ dat2plt <- dat2014 %>%
 
 levels(dat2plt$loss) = list(`Low Rate of C Stock Loss`="low", `Medium Rate of C Stock Loss`="med", `High Rate of C Stock Loss`="hgh")
 levels(dat2plt$gain) = list(High="hgh", Medium="med", Low="low")
-  
+    
 fig4 <- dat2plt %>%
   ggplot() +
   facet_wrap(. ~ loss, ncol = 3) + 

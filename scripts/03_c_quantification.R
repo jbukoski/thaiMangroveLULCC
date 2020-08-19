@@ -77,9 +77,36 @@ soc_rmse <- 109.0    # Cross-validation RMSE value reported in Sanderman et al.,
 
 for(i in 1:nrow(dstrcts_sp)) {
   
+  i = 1
+  
   shp <- dstrcts_sp[i, ]
   soc_crop <- crop(soc, shp)
   soc_dat <- raster::extract(soc_crop, shp, df = T)
+  
+  #---------
+  
+  soc_spdf <- as(soc_crop, "SpatialPointsDataFrame")
+  soc_smpl <- soc_spdf[sample(1:length(soc_spdf), 10000), ]
+  
+  v <- gstat::variogram(Mangrove_soc_Thailand~x+y, soc_smpl)
+  f = fit.variogram(v, vgm("Sph"))
+  
+  soc_range <- f$range[2]
+  
+  model <- c(var = 1, range = soc_range, shape = 0.5)
+  
+  simu <- geostatsp::RFsimulate(model, data = soc_crop, n = 2)
+  
+  plot(mask(simu, soc_crop))
+  
+  soc_df <- na.omit(as.data.frame(soc_crop$Mangrove_soc_Thailand))
+  soc_sim_df <- na.omit(as.data.frame(mask(simu[['sim1']], soc_crop)))
+  
+  mean(soc_df$Mangrove_soc_Thailand)
+  mean(mask(simu, soc_crop), na.rm = T)
+  
+  #----------
+  
   
   means <- c()
   
