@@ -83,3 +83,44 @@ levelplot(r, margin = list(axis = T, FUN = "sum"), colorkey = F,
           xlab = NULL, ylab = NULL) +
   layer(sp.polygons(gadm_sea, fill = "light grey", alpha = 0.2)) +
   layer(sp.polygons(tha, fill = "light grey", alpha = 0.2))
+
+
+
+#-----------------------------
+# Old for loop for adding uncertainty to raster data
+
+for(i in 1:nrow(dstrcts_sp)) {
+  
+  shp <- dstrcts_sp[i, ]
+  agb_crop <- crop(agb, shp)
+  agb_dat <- raster::extract(agb_crop, shp, df = T)
+  
+  means <- c()
+  
+  for(j in 1:100) {
+    
+    agb_mean <- mean(agb_dat$Mangrove_agb_Thailand, na.rm = T)
+    agb_sd <- sqrt(sd(agb_dat$Mangrove_agb_Thailand, na.rm = T)^2 + agb_rmse^2)
+    
+    if(!is.na(agb_mean)) {
+      
+      sim_agb <- rnorm(100, mean = mean(agb_dat$Mangrove_agb_Thailand, na.rm = T), sd = agb_sd)
+      sim_agb <- sim_agb[sim_agb > 0]
+      gammaParams <- egamma(sim_agb)
+      means[j] <- mean(stats::rgamma(100, shape = gammaParams$parameters[1], scale = gammaParams$parameters[2]))  
+      
+    } else {
+      
+      means <- NA
+      
+    }
+  
+  }
+  
+  dstrct_avgs$AGB_AVG[i] <- mean(means) * 0.47
+  dstrct_avgs$AGB_SE[i] <- plotrix::std.error(means)
+  
+  rm(agb_crop, agb_dat)
+  gc()
+  
+}

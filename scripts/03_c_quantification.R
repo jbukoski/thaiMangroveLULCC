@@ -21,22 +21,28 @@
 
 #-----------------------------------
 
-print("Begin Step 3. backmodeling of carbon stocks to historical mangrove extent...")
+print("Begin Step 3. modeling of district-level carbon stocks...")
 
 #-----------------------------------
 # Load in libaries
 
+library(doParallel)
 library(e1071)
 library(EnvStats)
+library(foreach)
 library(gdalUtils)
 library(gdata)
 library(ggpubr)
 library(ggthemes)
+library(geostatsp)
 library(gridExtra)
+library(RandomFields)
 library(raster)
 library(rgdal)
+library(rgeos)
 library(sf)
 library(sp)
+library(SpaDES)
 library(spsurvey)
 library(tidyverse)
 
@@ -75,105 +81,53 @@ dstrct_avgs <- data.frame("ADM2_ID" = 1:nrow(dstrcts_sp),
 agb_rmse <- 148.0 * 0.47  # Cross-validation RMSE value reported for SE Asia in Simard et al., 2019 SI File (rather high!)
 soc_rmse <- 109.0    # Cross-validation RMSE value reported in Sanderman et al., 2018
 
-for(i in 1:nrow(dstrcts_sp)) {
-  
-  i = 1
-  
-  shp <- dstrcts_sp[i, ]
-  soc_crop <- crop(soc, shp)
-  soc_dat <- raster::extract(soc_crop, shp, df = T)
-  
-  #---------
-  
-  soc_spdf <- as(soc_crop, "SpatialPointsDataFrame")
-  soc_smpl <- soc_spdf[sample(1:length(soc_spdf), 10000), ]
-  
-  v <- gstat::variogram(Mangrove_soc_Thailand~x+y, soc_smpl)
-  f = fit.variogram(v, vgm("Sph"))
-  
-  soc_range <- f$range[2]
-  
-  model <- c(var = 1, range = soc_range, shape = 0.5)
-  
-  simu <- geostatsp::RFsimulate(model, data = soc_crop, n = 2)
-  
-  plot(mask(simu, soc_crop))
-  
-  soc_df <- na.omit(as.data.frame(soc_crop$Mangrove_soc_Thailand))
-  soc_sim_df <- na.omit(as.data.frame(mask(simu[['sim1']], soc_crop)))
-  
-  mean(soc_df$Mangrove_soc_Thailand)
-  mean(mask(simu, soc_crop), na.rm = T)
-  
-  #----------
-  
-  
-  means <- c()
-  
-  for(j in 1:100) {
-    
-    soc_mean <- mean(soc_dat$Mangrove_soc_Thailand, na.rm = T)
-    soc_sd <- sqrt(sd(soc_dat$Mangrove_soc_Thailand, na.rm = T)^2 + soc_rmse^2)
-    
-    if(!is.na(soc_mean)) {
-      
-      sim_soc <- rnorm(100, mean = mean(soc_dat$Mangrove_soc_Thailand, na.rm = T), sd = soc_sd)
-      sim_soc <- sim_soc[sim_soc > 0]
-      gammaParams <- egamma(sim_soc)
-      means[j] <- mean(stats::rgamma(100, shape = gammaParams$parameters[1], scale = gammaParams$parameters[2]))  
-      
-    } else {
+# Source helper function to process data
 
-      means <- NA
-      
-    }
-    
-  }
+source("./scripts/helperFunctions.R")
+
+# Build cluster and set up log files.
+
+cl <- makeCluster(2)
+registerDoParallel(cl)
+clusterEvalQ(cl, sink(paste0("~/Desktop/log_", Sys.getpid(), ".txt")))
+
+libs <- c("raster", "rgdal", "rgeos", "sp", "sf", 
+          "tidyverse", "geostatsp", "RandomFields", "SpaDES")
+
+# Calculate district level soil averages and standard errors
+
+soc_vals <- foreach(i = 1:nrow(dstrcts), .packages = libs, .combine = "rbind") %dopar% {
   
-  dstrct_avgs$SOC_AVG[i] <- mean(means)
-  dstrct_avgs$SOC_SE[i] <- plotrix::std.error(means)
+  calcDistrictCarbon(dstrcts, soc, soc_rmse, i)
+
+}
+
+soc_vals_df <- soc_vals %>%
+  as.data.frame() %>%
+  rename(ADM2_EN = V1, SOC_AVG = V2, SOC_SE = V3)
+
+write_csv(soc_vals_df, "./data/processed/soc_vals.csv")
+
+# Repeat for aboveground biomass
+
+agb_vals <- foreach(i = 1:nrow(dstrcts), .packages = libs, .combine = "rbind") %dopar% {
   
-  rm(soc_dat, soc_crop, means)
-  gc()
+  calcDistrictCarbon(dstrcts, agb, agb_rmse, i)
   
 }
 
+agb_vals_df <- agb_vals %>%
+  as.data.frame() %>%
+  rename(ADM2_EN = V1, AGB_AVG = V2, AGB_SE = V3)
 
-for(i in 1:nrow(dstrcts_sp)) {
-  
-  shp <- dstrcts_sp[i, ]
-  agb_crop <- crop(agb, shp)
-  agb_dat <- raster::extract(agb_crop, shp, df = T)
-  
-  means <- c()
-  
-  for(j in 1:100) {
-    
-    agb_mean <- mean(agb_dat$Mangrove_agb_Thailand, na.rm = T)
-    agb_sd <- sqrt(sd(agb_dat$Mangrove_agb_Thailand, na.rm = T)^2 + agb_rmse^2)
-    
-    if(!is.na(agb_mean)) {
-      
-      sim_agb <- rnorm(100, mean = mean(agb_dat$Mangrove_agb_Thailand, na.rm = T), sd = agb_sd)
-      sim_agb <- sim_agb[sim_agb > 0]
-      gammaParams <- egamma(sim_agb)
-      means[j] <- mean(stats::rgamma(100, shape = gammaParams$parameters[1], scale = gammaParams$parameters[2]))  
-      
-    } else {
-      
-      means <- NA
-      
-    }
-    
-  }
-  
-  dstrct_avgs$AGB_AVG[i] <- mean(means) * 0.47
-  dstrct_avgs$AGB_SE[i] <- plotrix::std.error(means)
-  
-  rm(agb_crop, agb_dat)
-  gc()
-  
-}
+write_csv(agb_vals_df, "./data/processed/agb_vals.csv")
+
+
+stopCluster(cl)
+
+
+
+
 
 dstrcts_c <- dstrcts_sp %>% 
   st_as_sf() %>%
