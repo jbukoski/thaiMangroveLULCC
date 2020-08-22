@@ -25,7 +25,7 @@ calcDistrictCarbon <- function(polys, rast, rast_rmse, i) {
     
     if(ncell(rast_buff) > 5000000) {
       
-      for(m in 1:20) {
+      for(m in 1:40) {
         
         splt <- splitRaster(rast_buff, 2, 2)
         splt_mean1 <- mean(getValues(splt[[1]]), na.rm = T)
@@ -69,7 +69,7 @@ calcDistrictCarbon <- function(polys, rast, rast_rmse, i) {
       
     } else if(ncell(rast_buff) > 1500000) {
       
-      for(j in 1:10) {
+      for(j in 1:20) {
         
         sim <- geostatsp::RFsimulate(model, x = rast_buff, n = 2)
         sims <- stack(sims, sim)
@@ -78,7 +78,7 @@ calcDistrictCarbon <- function(polys, rast, rast_rmse, i) {
       
     } else {
       
-      for(j in 1:4) {
+      for(j in 1:8) {
         
         sim <- geostatsp::RFsimulate(model, x = rast_buff, n = 5)
         sims <- stack(sims, sim)
@@ -94,19 +94,19 @@ calcDistrictCarbon <- function(polys, rast, rast_rmse, i) {
     
     means <- c()
     
-    for(k in 1:2) {
+    for(k in 1:40) {
       
       means <- c(means, mean(getValues(mask(sims[[k]], rast_crop)), na.rm = T))
       
     }
     
     print(paste0(shp$ADM2_EN, " - ", i))
-    vals <- c(shp$ADM2_EN, mean(means, na.rm = T), plotrix::std.error(means, na.rm = T))
+    vals <- c(shp$ADM2_EN, means)
     
   } else {
     
     print(paste0(shp$ADM2_EN, " - ", i))
-    vals <- c(shp$ADM2_EN, NA, NA)
+    vals <- c(shp$ADM2_EN, rep(NA, 40))
     
   }
   

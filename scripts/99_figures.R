@@ -222,7 +222,7 @@ ggsave("./figs/fig2_growth.jpg", fig3_growthMdl, width = 6, height = 4, units = 
 # Build bar charts of total carbon emissions under the different assumptions
 
 dat2000 <- read_csv("./data/processed/allPrdsSmry.csv") %>%
-  mutate(error = error * 1.96)
+  mutate(error = error)
 
 dat2000$year[1] <- "1960 - 2000"
 
@@ -277,14 +277,16 @@ fig4 <- dat2plt %>%
   facet_wrap(. ~ loss, ncol = 3) + 
   geom_bar(aes(x = gain, y = ttl, col = loss, fill = loss), alpha = 0.2, width = 0.7, stat = "identity") +
   #geom_point(aes(x = gain, y = ttl, col = loss), fill = NA, size = 1.5, shape = 19, stat = "identity") +
-  geom_errorbar(aes(x = gain, ymin = ttl - ttl_se * 1.96, ymax = ttl + ttl_se * 1.96, col = loss), alpha = 0.8, width = .1, position = position_dodge(.9)) +
-  ylim(c(-2.5, 7.5)) +
+  geom_errorbar(aes(x = gain, ymin = ttl - ttl_se, ymax = ttl + ttl_se, col = loss), alpha = 0.8, width = .1, position = position_dodge(.9)) +
+  ylim(c(-2.5, 8.5)) +
   ylab("Total Emissions, 2000-2014 (Million Mg C)") +
   xlab("Rate of C Stock Gain") +
   scale_fill_manual(values = c("Low Rate of C Stock Loss" = "#56B4E9", "Medium Rate of C Stock Loss" = "#009E73", "High Rate of C Stock Loss" = "#0072B2")) +
   scale_color_manual(values = c("Low Rate of C Stock Loss" = "#56B4E9", "Medium Rate of C Stock Loss" = "#009E73", "High Rate of C Stock Loss" = "#0072B2")) +
-  #geom_hline(aes(yintercept = 0), col = "grey", linetype = "longdash") +
+  geom_hline(aes(yintercept = 0), col = "grey", linetype = "solid") +
   geom_hline(aes(yintercept = net_ttl), col = "#999999", linetype = "dashed") +
+  #geom_hline(aes(yintercept = net_ttl + net_ttl_se * 1.96), col = "#999999", linetype = "dotted") +
+  #geom_hline(aes(yintercept = net_ttl - net_ttl_se * 1.96), col = "#999999", linetype = "dotted") +
   theme_bw() +
   theme(panel.grid.minor = element_blank(),
         panel.grid.major = element_blank(),

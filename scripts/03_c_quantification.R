@@ -78,8 +78,8 @@ dstrct_avgs <- data.frame("ADM2_ID" = 1:nrow(dstrcts_sp),
                           "SOC_AVG" = NA, "SOC_SE" = NA,
                           "AGB_AVG" = NA, "AGB_SE" = NA)
 
-agb_rmse <- 148.0 * 0.47  # Cross-validation RMSE value reported for SE Asia in Simard et al., 2019 SI File (rather high!)
-soc_rmse <- 109.0    # Cross-validation RMSE value reported in Sanderman et al., 2018
+agb_rmse <- 148.0  # Cross-validation RMSE value reported for SE Asia in Simard et al., 2019 SI File (rather high!)
+soc_rmse <- 109.0  # Cross-validation RMSE value reported in Sanderman et al., 2018
 
 # Source helper function to process data
 
@@ -87,51 +87,94 @@ source("./scripts/helperFunctions.R")
 
 # Build cluster and set up log files.
 
-cl <- makeCluster(2)
+cl <- makeCluster(3)
 registerDoParallel(cl)
 clusterEvalQ(cl, sink(paste0("~/Desktop/log_", Sys.getpid(), ".txt")))
 
 libs <- c("raster", "rgdal", "rgeos", "sp", "sf", 
           "tidyverse", "geostatsp", "RandomFields", "SpaDES")
 
-# Calculate district level soil averages and standard errors
+# Calculate district level C averages and standard errors (took approximately 3 hrs distributed across 3 cores)
 
-soc_vals <- foreach(i = 1:nrow(dstrcts), .packages = libs, .combine = "rbind") %dopar% {
-  
-  calcDistrictCarbon(dstrcts, soc, soc_rmse, i)
+agb_vals <- foreach(i = 1:nrow(dstrcts), .packages = libs, .combine = "rbind") %dopar% { calcDistrictCarbon(dstrcts, agb, agb_rmse, i) }
+soc_vals <- foreach(i = 1:nrow(dstrcts), .packages = libs, .combine = "rbind") %dopar% { calcDistrictCarbon(dstrcts, soc, soc_rmse, i) }
 
-}
-
-soc_vals_df <- soc_vals %>%
-  as.data.frame() %>%
-  rename(ADM2_EN = V1, SOC_AVG = V2, SOC_SE = V3)
-
-write_csv(soc_vals_df, "./data/processed/soc_vals.csv")
-
-# Repeat for aboveground biomass
-
-agb_vals <- foreach(i = 1:nrow(dstrcts), .packages = libs, .combine = "rbind") %dopar% {
-  
-  calcDistrictCarbon(dstrcts, agb, agb_rmse, i)
-  
-}
-
-agb_vals_df <- agb_vals %>%
-  as.data.frame() %>%
-  rename(ADM2_EN = V1, AGB_AVG = V2, AGB_SE = V3)
-
-write_csv(agb_vals_df, "./data/processed/agb_vals.csv")
-
+write_csv(as.data.frame(soc_vals), "./data/processed/raw_soc_runs.csv")
 
 stopCluster(cl)
 
+# Clean up datasets and write to file
+
+agb_vals_df <- t(agb_vals) %>%
+  as_tibble() %>%
+  slice(2:41)
+
+colnames(agb_vals_df) <- t(agb_vals)[1, ]
+
+agb_vals_df <- as_data_frame(sapply(agb_vals_df, as.numeric))
+
+agb_stats <- tibble(dstrct_cd = integer(), AGB_AVG = double(), AGB_SE = double())
+
+for(i in 1:ncol(agb_vals_df)) {
+  
+  avg <- mean(pull(agb_vals_df, i), na.rm = T)
+  se <- plotrix::std.error(pull(agb_vals_df, i), na.rm = T)
+  if(is.finite(avg)) { avg <- avg } else {avg <- NA}
+  
+  vals <- tibble(dstrct_cd = i, AGB_AVG = avg, AGB_SE = se)
+  
+  agb_stats <- bind_rows(agb_stats, vals)
+  
+}
+
+agb_vals_df <- cbind(pull(as_tibble(agb_vals), V1), agb_stats) %>%
+  mutate(AGB_AVG = AGB_AVG * 0.47,
+         AGB_SE = AGB_SE * 0.47) %>%
+  rename(ADM2_EN = "pull(as_tibble(agb_vals), V1)",
+         ADM2_CD = dstrct_cd)
+
+write_csv(agb_vals_df, "./data/processed/agb_vals.csv")
+
+#---------------------
+# Repeat for SOC values
+
+soc_vals_df <- t(soc_vals) %>%
+  as_tibble() %>%
+  slice(2:41)
+
+colnames(soc_vals_df) <- t(soc_vals)[1, ]
+
+soc_vals_df <- as_tibble(sapply(soc_vals_df, as.numeric))
+
+soc_stats <- tibble(dstrct_cd = integer(), SOC_AVG = double(), SOC_SE = double())
+
+for(i in 1:ncol(soc_vals_df)) {
+  
+  avg <- mean(pull(soc_vals_df, i), na.rm = T)
+  se <- plotrix::std.error(pull(soc_vals_df, i), na.rm = T)
+  if(is.finite(avg)) { avg <- avg } else {avg <- NA}
+  
+  vals <- tibble(dstrct_cd = i, SOC_AVG = avg, SOC_SE = se)
+  
+  soc_stats <- bind_rows(soc_stats, vals)
+  
+}
+
+soc_vals_df <- cbind(pull(as_tibble(soc_vals), V1), soc_stats) %>%
+  rename(ADM2_EN = "pull(as_tibble(soc_vals), V1)",
+         ADM2_CD = dstrct_cd)
+
+write_csv(soc_vals_df, "./data/processed/soc_vals.csv")
 
 
+# Join the district C summaries to the dstrcts shapefile and write it to file.
 
+dstrct_avgs <- agb_vals_df %>%
+  left_join(soc_vals_df)
 
 dstrcts_c <- dstrcts_sp %>% 
   st_as_sf() %>%
-  left_join(dstrct_avgs, by = "ADM2_ID") %>%
+  left_join(dstrct_avgs, by = "ADM2_EN") %>%
   arrange(ADM1_EN, ADM2_EN) %>%
   group_by(ADM1_EN) %>%
   mutate(SOC_AVG = ifelse(is.nan(SOC_AVG), mean(SOC_AVG, na.rm = T), SOC_AVG),
@@ -190,7 +233,6 @@ yr50val <- (138.7840 / (1 + 17.8151 * exp(1) ^ (-0.1765 * 50) ))
 mean_AGB_rate <- 100 * yr14val / yr50val
 low_AGB_rate <- 100 * prop_df[prop_df$yr == 14, 3] / yr50val
 high_AGB_rate <- 100 * prop_df[prop_df$yr == 14, 4] / yr50val
-
 
 #------------------------------
 
@@ -328,7 +370,7 @@ net <- mg2014_df %>%
          net_mg_c_ls_se_low = (mangrov_net * AGB_SE * 0.47) + (mangrov_net * SOC_SE * 0.41)) %>%
   dplyr::select(ADM2_EN, net_mg_c_ls_hgh:net_mg_c_ls_se_low)
 
-net_ttls <- as.data.frame(rbind(colSums(select(net, - ADM2_EN), na.rm = T) / 1000000))
+net_ttls <- as.data.frame(rbind(colSums(dplyr::select(net, - ADM2_EN), na.rm = T) / 1000000))
 
 net_total <- net_ttls$net_mg_c_ls_med
 net_total_se <- net_ttls$net_mg_c_ls_se_med
@@ -346,9 +388,9 @@ smryDat2014 <- smryDat2014 %>%
                              ifelse(loss == "med", net_ttls$net_mg_c_ls_se_med * -1, net_ttls$net_mg_c_ls_se_low * -1)))
 
 allPrdsSmry <- data.frame(year = c("pre-1960 - 2000", "2000-2014, LULCC", "2000-2014, LULCC", "2000-2014, net"),
-                          carbon = c(-34.56, -7.02, 3.93, -1.8),
-                          error = c(-0.30, -0.06, 0.03, -0.02),
-                          net = c(NA, -3.09, -3.09, -1.8),
+                          carbon = c(-29.43, -6.47, 3.55, -1.90),
+                          error = c(-10.15, -1.699, 1.03, -0.23),
+                          net = c(NA, -2.92, -2.92, -1.90),
                           style = c("Loss", "Loss", "Gain", "Net"))
 
 
