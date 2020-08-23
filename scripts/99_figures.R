@@ -116,63 +116,15 @@ p4 <- base +
 
 f1 <- grid.arrange(p1, p2, p3, p4, nrow = 2)
 
+plot(f1)
+
 ggsave("./figs/f1_loss_map.jpg", f1, width = 10.2, height = 13.2, units = c("in"), device = "jpeg")
 
-#---------------------------------------
-# Build a plot to summarize the data:
-
-tab <- data.frame(year = factor(c("1960-2000", "2000-2014, LULCC", "2000-2014, LULCC", "2000-2014, LULCC", "2000-2014, net")),
-                  carbon = c(-41.3, -9.7, 3.4, -3.4, -2.3),
-                  style = factor(c("Net", "Net", "Gain", "Loss", "Net"), levels = c("Net", "Gain", "Loss")),
-                  alph = c(1, 1, 0.5, 0.5, 1),
-                  fct = rep(" ", 5))
-
-tab2 <- data.frame(loss = factor(c(rep("High Loss", 9), rep("Medium Loss", 9), rep("Low Loss", 9)), levels = c("High Loss", "Medium Loss", "Low Loss")),
-                   scenario = factor(rep( c(rep("Low Gain", 3), rep("Medium Gain", 3), rep("High Gain", 3)), 3), 
-                                     levels = c("Low Gain", "Medium Gain", "High Gain")),
-                   value = c(-2.0, 2.0, -14.1, -3.4, 3.4, -12.7, -6.1, 6.1, -10.0, -2.0, 2.0, -11.1, -3.4, 3.4, -9.7, -6.1, 6.1, -7, -2.0, 2.0, -7.0, -3.4, 3.4, -5.6, -6.1, 6.1, -2.9),
-                   type = rep(c("Loss", "Gain", "Net"), 9),
-                   type2 = rep(c(rep("dotted", 2), "solid"), 9),
-                   alph = rep(c(rep(0.5, 2), 1), 9))
-
-p1 <- ggplot(tab) +
-  facet_wrap(~fct) +
-  geom_bar(aes(x = year, y = carbon, fill = factor(style, levels = c("Loss", "Gain", "Net")), 
-               linetype = style), col = "black", stat = "identity", width = 0.6) +
-  scale_fill_manual("Carbon Flux", values = c("Net" = "#44aa99", "Gain" = "#117733", "Loss" = "#88ccee")) +
-  ylim(c(-42, 10)) +
-  ggtitle("a) Carbon Stock Losses by Time Period") +
-  labs(y = "Million Mg C") +
-  guides(linetype = "none",
-         alpha = "none") +
-  theme_tufte() +
-  theme(axis.title.x = element_blank(),
-        legend.position = c(0.5, 0.97),
-        legend.direction = "horizontal")
-
-p2 <- ggplot(tab2) +
-  facet_wrap(~loss) +
-  geom_bar(aes(x = scenario, y = value, fill = type, 
-               linetype = factor(type2, levels = c("solid", "dotted"))), 
-           col = "black", stat = "identity") +
-  scale_fill_manual("Carbon Flux", values = c("Net" = "#44aa99", "Gain" = "#117733", "Loss" = "#88ccee")) +
-  ylim(c(-42, 10)) +
-  ggtitle("b) Variation in Loss and Gain Rate Assumptions") +
-  guides(linetype = "none",
-         alpha = "none") +
-  labs(y = "Million Mg C") +
-  theme_tufte() +
-  theme(legend.position = "none",
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank())
-
-
-fig2 <- grid.arrange(p1, p2, nrow = 1, widths = c(0.33, 0.66))
-
-ggsave("./figs/f2_stocks.jpg", fig2, width = 12, height = 5, units = c("in"), device = "jpeg")
-
 #-----------------------------------------------
-# Biomass growth plot
+
+###################################
+## Fig. 2 -  Biomass growth plot ##
+###################################
 
 dat <- read_xlsx("./data/raw/sigit_data.xlsx") %>%
   dplyr::select(dataset_variable, yr = "regeneration age", agb = mean) %>%
@@ -215,14 +167,19 @@ fig3_growthMdl <- ggplot(dat, aes(yr, agb)) +
         axis.title.x = element_text(family = "sans"),
         axis.title.y = element_text(family = "sans"))
 
+fig3_growthMdl
+
 ggsave("./figs/fig2_growth.jpg", fig3_growthMdl, width = 6, height = 4, units = c("in"), device = "jpeg")
 
 
 #----------------------------------------
-# Build bar charts of total carbon emissions under the different assumptions
+
+###############################################################
+## Fig. 3 - Bar charts of total C under different approaches ##
+###############################################################
 
 dat2000 <- read_csv("./data/processed/allPrdsSmry.csv") %>%
-  mutate(error = error)
+  mutate(error = error * 1.96)
 
 dat2000$year[1] <- "1960 - 2000"
 
@@ -258,6 +215,10 @@ ggsave("./figs/fig3_stocks.jpg", fig3, width = 4, height = 6, units = c("in"), d
 
 #---------------------------------
 
+#################################################################
+## Fig. 4 - Uncertainty based on rate of gain/loss assumptions ##
+#################################################################
+
 dat2014 <- read_csv("./data/processed/carbonSummary2014.csv")
 
 dat2plt <- dat2014 %>%
@@ -277,8 +238,8 @@ fig4 <- dat2plt %>%
   facet_wrap(. ~ loss, ncol = 3) + 
   geom_bar(aes(x = gain, y = ttl, col = loss, fill = loss), alpha = 0.2, width = 0.7, stat = "identity") +
   #geom_point(aes(x = gain, y = ttl, col = loss), fill = NA, size = 1.5, shape = 19, stat = "identity") +
-  geom_errorbar(aes(x = gain, ymin = ttl - ttl_se, ymax = ttl + ttl_se, col = loss), alpha = 0.8, width = .1, position = position_dodge(.9)) +
-  ylim(c(-2.5, 8.5)) +
+  geom_errorbar(aes(x = gain, ymin = ttl - ttl_se * 1.96, ymax = ttl + ttl_se * 1.96, col = loss), alpha = 0.8, width = .1, position = position_dodge(.9)) +
+  #ylim(c(-2.5, 8.5)) +
   ylab("Total Emissions, 2000-2014 (Million Mg C)") +
   xlab("Rate of C Stock Gain") +
   scale_fill_manual(values = c("Low Rate of C Stock Loss" = "#56B4E9", "Medium Rate of C Stock Loss" = "#009E73", "High Rate of C Stock Loss" = "#0072B2")) +
@@ -300,3 +261,33 @@ fig4 <- dat2plt %>%
 fig4
 
 ggsave("./figs/fig4_assumptions.jpg", fig4, width = 6, height = 5, units = c("in"), device = "jpeg")
+
+#-------------------------------
+# Correlation between NA gains and mangrove extents
+
+dstrcts_c_df <- st_read(paste0(proc_dir, "shapefiles/dstrcts_c/")) %>%
+  st_set_geometry(NULL)
+
+mg2014_gn <- st_read(paste0(proc_dir, "shapefiles/dstrct_gains_2014")) %>%
+  left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID"))
+
+sum(mg2014_gn$nodata, na.rm = T)
+
+na_cor <- cor(na.omit(mg2014_gn$mangrov), na.omit(mg2014_gn$nodata), method = "pearson")
+
+lm(nodata ~ mangrov, data = mg2014_gn)
+
+fig5 <- mg2014_gn %>%
+  st_set_geometry(NULL) %>%
+  ggplot(aes(x = mangrov / 1000, y = nodata / 1000)) +
+  geom_point(color = "dark grey") +
+  theme_tufte() +
+  ylab("Extent of new mangrove colonization (kha)") +
+  xlab("Extent of non-converted mangrove (kha)") +
+  stat_smooth(method = "lm", color = "red", size = 0.5, fill = "grey") +
+  annotate("text", x = 12.5, y = 0.1, label = "Pearson Corr. = 0.87", col = "red") +
+  theme(axis.title.x = element_text(family = "sans"),
+        axis.title.y = element_text(family = "sans"))
+
+fig5
+

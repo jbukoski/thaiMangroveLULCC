@@ -258,15 +258,20 @@ mg2014_ls <- st_read(paste0(proc_dir, "shapefiles/dstrct_losses_2014")) %>%
 mg2014_gn <- st_read(paste0(proc_dir, "shapefiles/dstrct_gains_2014")) %>%
   left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID"))
 
+mg2014_gn %>%
+  st_set_geometry(NULL) %>%
+  ggplot() +
+  geom_point(aes( x= mangrov, y = nodata))
+
 
 # Build a helper function to apply varying rates of stock change
 
 calcCarbon <- function(sf_obj, agb_rate, soc_rate, nodata = F) {
   
-  if(!("nodata" %in% colnames(sf_obj))) {
+  if(!("nodata" %in% colnames(sf_obj) | "water" %in% colnames(sf_obj))) {
     
     sf_obj <- sf_obj %>%
-      mutate(nodata = NA)
+      mutate(nodata = NA, water = NA)
     
   }
   
@@ -281,11 +286,13 @@ calcCarbon <- function(sf_obj, agb_rate, soc_rate, nodata = F) {
            salt_c = (slt_frm * AGB_AVG * agb_rate) + (slt_frm * SOC_AVG * soc_rate),
            salt_c_se = (slt_frm * AGB_SE * agb_rate) + (slt_frm * SOC_SE * soc_rate),
            urbn_c = (urban * AGB_AVG * agb_rate) + (urban * SOC_AVG * soc_rate),
-           urbn_c_se = (urban * AGB_SE * agb_rate) + (urban * SOC_SE * soc_rate), 
+           urbn_c_se = (urban * AGB_SE * agb_rate) + (urban * SOC_SE * soc_rate),
+           wtr_c = (water * AGB_AVG * agb_rate) + (water * SOC_AVG * soc_rate),
+           wtr_c_se = (water * AGB_SE * agb_rate) + (water * SOC_SE * soc_rate),
            na_c = (nodata * AGB_AVG * agb_rate) + (nodata * SOC_AVG * soc_rate),
            na_c_se = (nodata * AGB_SE * agb_rate) + (nodata * SOC_SE) * soc_rate) %>%
       dplyr::select(aqua_c, aqua_c_se, agri_c, agri_c_se, abnd_c, abnd_c_se,
-                    salt_c, salt_c_se, urbn_c, urbn_c_se, na_c, na_c_se)
+                    salt_c, salt_c_se, urbn_c, urbn_c_se, na_c, na_c_se, wtr_c, wtr_c_se)
 
   ttls <- colSums(df, na.rm = T)
   ttl <- sum(ttls)
@@ -336,8 +343,8 @@ carbonTable <- rbind(mg2000_hls, mg2000_mls, mg2000_lls,
   mutate(year = c(rep("2000", 3), rep("2014", 15)),
          loss = c(rep(c("hgh", "med", "low"), 2), rep(NA, 3), rep("hgh", 3), rep("med", 3), rep("low", 3)),
          gain = c(rep(NA, 6), rep(c("hgh", "med", "low"), 4))) %>%
-  mutate(ttl = (aqua_c + agri_c + abnd_c + salt_c + urbn_c + na_c) / 1000000,
-         ttl_se = (aqua_c_se + agri_c_se + abnd_c_se + salt_c_se + urbn_c_se + na_c_se) / 1000000)
+  mutate(ttl = (aqua_c + agri_c + abnd_c + salt_c + urbn_c + na_c + wtr_c) / 1000000,
+         ttl_se = (aqua_c_se + agri_c_se + abnd_c_se + salt_c_se + urbn_c_se + na_c_se + wtr_c_se) / 1000000)
 
 smryDat2000 <- carbonTable[1:9, ] %>%
   dplyr::select(year, loss, gain, ttl, ttl_se)
@@ -388,9 +395,9 @@ smryDat2014 <- smryDat2014 %>%
                              ifelse(loss == "med", net_ttls$net_mg_c_ls_se_med * -1, net_ttls$net_mg_c_ls_se_low * -1)))
 
 allPrdsSmry <- data.frame(year = c("pre-1960 - 2000", "2000-2014, LULCC", "2000-2014, LULCC", "2000-2014, net"),
-                          carbon = c(-29.43, -6.47, 3.55, -1.90),
-                          error = c(-10.15, -1.699, 1.03, -0.23),
-                          net = c(NA, -2.92, -2.92, -1.90),
+                          carbon = c(-33.23, -9.50, 3.83, -1.85),
+                          error = c(-2.74, -0.74, 0.30, -0.15),
+                          net = c(NA, -5.67, -5.67, -1.85),
                           style = c("Loss", "Loss", "Gain", "Net"))
 
 
@@ -439,8 +446,8 @@ calcRestorationCarbon <- function(df, rstr_rate, agb_rate, soc_rate) {
   
 }
 
-agb <- 0.24  # high 65%, med 40%, low 24%
-soc <- 0.08  # high 43%, med 26%, low 8%
+agb <- 0.65  # high 65%, med 40%, low 24%
+soc <- 0.43  # high 43%, med 26%, low 8%
 
 calcRestorationCarbon(mg2014_rstrn, 0.001, agb, soc)
 calcRestorationCarbon(mg2014_rstrn, 0.01, agb, soc)
