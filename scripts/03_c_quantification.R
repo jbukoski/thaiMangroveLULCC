@@ -213,6 +213,18 @@ model <- nls(agb ~ a / (1 + b * exp(1) ^ (-k * yr)), start=list(a = 140, b = 13,
 
 predictDat <- seq(0, max(dat$yr), by = 2)
 
+  
+dat %>%
+  ggplot(aes(x = yr, y = agb)) +
+  geom_point() +
+  geom_smooth(method = "nls", 
+              formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
+              method.args = list(start = c(a = 138.794, b = 25.162, k = 0.197)),
+              se = FALSE) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
 prop1 <- predictNLS(model, newdata = data.frame(yr = predictDat))
 
 prop_df <- data.frame(yr = predictDat,
@@ -258,12 +270,6 @@ mg2014_ls <- st_read(paste0(proc_dir, "shapefiles/dstrct_losses_2014")) %>%
 mg2014_gn <- st_read(paste0(proc_dir, "shapefiles/dstrct_gains_2014")) %>%
   left_join(dstrcts_c_df, by = c("ADM2_EN", "ADM1_EN", "ADM2_ID"))
 
-mg2014_gn %>%
-  st_set_geometry(NULL) %>%
-  ggplot() +
-  geom_point(aes( x= mangrov, y = nodata))
-
-
 # Build a helper function to apply varying rates of stock change
 
 calcCarbon <- function(sf_obj, agb_rate, soc_rate, nodata = F) {
@@ -290,7 +296,7 @@ calcCarbon <- function(sf_obj, agb_rate, soc_rate, nodata = F) {
            wtr_c = (water * AGB_AVG * agb_rate) + (water * SOC_AVG * soc_rate),
            wtr_c_se = (water * AGB_SE * agb_rate) + (water * SOC_SE * soc_rate),
            na_c = (nodata * AGB_AVG * agb_rate) + (nodata * SOC_AVG * soc_rate),
-           na_c_se = (nodata * AGB_SE * agb_rate) + (nodata * SOC_SE) * soc_rate) %>%
+           na_c_se = (nodata * AGB_SE * agb_rate) + (nodata * SOC_SE * soc_rate)) %>%
       dplyr::select(aqua_c, aqua_c_se, agri_c, agri_c_se, abnd_c, abnd_c_se,
                     salt_c, salt_c_se, urbn_c, urbn_c_se, na_c, na_c_se, wtr_c, wtr_c_se)
 
@@ -301,37 +307,45 @@ calcCarbon <- function(sf_obj, agb_rate, soc_rate, nodata = F) {
   
 }
 
+
+agb_ls <- c(1, 0.82, 0.47)
+soc_ls <- c(0.67, 0.54, 0.41)
+
+agb_gn <- c(0.65, 0.40, 0.24)
+soc_gn <- c(1.07, 0.91, 0.77)
+
+
 # Calculate high, medium and low loss rates
 
-mg2000_hls <- calcCarbon(mg2000, agb_rate = 1, soc_rate = 0.67)
-mg2000_mls <- calcCarbon(mg2000, agb_rate = 0.82, soc_rate = 0.54)
-mg2000_lls <- calcCarbon(mg2000, agb_rate = 0.47, soc_rate = 0.41)
+mg2000_hls <- calcCarbon(mg2000, agb_ls[1], soc_ls[1])
+mg2000_mls <- calcCarbon(mg2000, agb_ls[2], soc_ls[2])
+mg2000_lls <- calcCarbon(mg2000, agb_ls[3], soc_ls[3])
 
-mg2014_hls <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67)
-mg2014_mls <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54)
-mg2014_lls <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41)
+mg2014_hls <- calcCarbon(mg2014_ls, agb_ls[1], soc_ls[1])
+mg2014_mls <- calcCarbon(mg2014_ls, agb_ls[2], soc_ls[2])
+mg2014_lls <- calcCarbon(mg2014_ls, agb_ls[3], soc_ls[3])
 
-mg2014_hgn <- calcCarbon(mg2014_gn, agb_rate = 0.65, soc_rate = 0.43)
-mg2014_mgn <- calcCarbon(mg2014_gn, agb_rate = 0.40, soc_rate = 0.26)
-mg2014_lgn <- calcCarbon(mg2014_gn, agb_rate = 0.24, soc_rate = 0.08)
+mg2014_hgn <- calcCarbon(mg2014_gn, agb_gn[1], soc_gn[1])
+mg2014_mgn <- calcCarbon(mg2014_gn, agb_gn[2], soc_gn[2])
+mg2014_lgn <- calcCarbon(mg2014_gn, agb_gn[3], soc_gn[3])
 
 # High loss, varying gains for 2000 - 2014
 
-mg2014_hls_hgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.65, soc_rate = 0.43)
-mg2014_hls_mgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.40, soc_rate = 0.26)
-mg2014_hls_lgn <- calcCarbon(mg2014_ls, agb_rate = 1, soc_rate = 0.67) - calcCarbon(mg2014_gn, agb_rate = 0.24, soc_rate = 0.08)
+mg2014_hls_hgn <- calcCarbon(mg2014_ls, agb_ls[1], soc_ls[1]) - calcCarbon(mg2014_gn, agb_gn[1], soc_gn[1])
+mg2014_hls_mgn <- calcCarbon(mg2014_ls, agb_ls[1], soc_ls[1]) - calcCarbon(mg2014_gn, agb_gn[2], soc_gn[2])
+mg2014_hls_lgn <- calcCarbon(mg2014_ls, agb_ls[1], soc_ls[1]) - calcCarbon(mg2014_gn, agb_gn[3], soc_gn[3])
 
 # Medium loss, varying gains for 2000 - 2014
 
-mg2014_mls_hgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.65, soc_rate = 0.43)
-mg2014_mls_mgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.40, soc_rate = 0.26)
-mg2014_mls_lgn <- calcCarbon(mg2014_ls, agb_rate = 0.82, soc_rate = 0.54) - calcCarbon(mg2014_gn, agb_rate = 0.24, soc_rate = 0.08)
+mg2014_mls_hgn <- calcCarbon(mg2014_ls, agb_ls[2], soc_ls[2]) - calcCarbon(mg2014_gn, agb_gn[1], soc_gn[1])
+mg2014_mls_mgn <- calcCarbon(mg2014_ls, agb_ls[2], soc_ls[2]) - calcCarbon(mg2014_gn, agb_gn[2], soc_gn[2])
+mg2014_mls_lgn <- calcCarbon(mg2014_ls, agb_ls[2], soc_ls[2]) - calcCarbon(mg2014_gn, agb_gn[3], soc_gn[3])
 
 # Low loss, varying gains for 2000 - 2014
 
-mg2014_lls_hgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.65, soc_rate = 0.43)
-mg2014_lls_mgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.40, soc_rate = 0.26)
-mg2014_lls_lgn <- calcCarbon(mg2014_ls, agb_rate = 0.47, soc_rate = 0.41) - calcCarbon(mg2014_gn, agb_rate = 0.24, soc_rate = 0.08)
+mg2014_lls_hgn <- calcCarbon(mg2014_ls, agb_ls[3], soc_ls[3]) - calcCarbon(mg2014_gn, agb_gn[1], soc_gn[1])
+mg2014_lls_mgn <- calcCarbon(mg2014_ls, agb_ls[3], soc_ls[3]) - calcCarbon(mg2014_gn, agb_gn[2], soc_gn[2])
+mg2014_lls_lgn <- calcCarbon(mg2014_ls, agb_ls[3], soc_ls[3]) - calcCarbon(mg2014_gn, agb_gn[3], soc_gn[3])
 
 carbonTable <- rbind(mg2000_hls, mg2000_mls, mg2000_lls,
                      mg2014_hls, mg2014_mls, mg2014_lls,
@@ -446,14 +460,15 @@ calcRestorationCarbon <- function(df, rstr_rate, agb_rate, soc_rate) {
   
 }
 
-agb <- 0.65  # high 65%, med 40%, low 24%
-soc <- 0.43  # high 43%, med 26%, low 8%
+agb <- 0.24  # high 65%, med 40%, low 24%
+soc <- 0.08  # high 43%, med 26%, low 8%
 
-calcRestorationCarbon(mg2014_rstrn, 0.001, agb, soc)
-calcRestorationCarbon(mg2014_rstrn, 0.01, agb, soc)
-calcRestorationCarbon(mg2014_rstrn, 0.02, agb, soc)
-calcRestorationCarbon(mg2014_rstrn, 0.05, agb, soc)
-calcRestorationCarbon(mg2014_rstrn, 0.1, agb, soc)
+calcRestorationCarbon(mg2014_rstrn, 0.001, agb, soc) * 10/14
+calcRestorationCarbon(mg2014_rstrn, 0.01, agb, soc) * 10/14
+calcRestorationCarbon(mg2014_rstrn, 0.02, agb, soc) * 10/14
+calcRestorationCarbon(mg2014_rstrn, 0.05, agb, soc) * 10/14
+calcRestorationCarbon(mg2014_rstrn, 0.1, agb, soc) * 10/14
+
 
 #----------------------------------------
 # Do your own dishes

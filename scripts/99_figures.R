@@ -181,7 +181,7 @@ ggsave("./figs/fig2_growth.jpg", fig3_growthMdl, width = 6, height = 4, units = 
 dat2000 <- read_csv("./data/processed/allPrdsSmry.csv") %>%
   mutate(error = error * 1.96)
 
-dat2000$year[1] <- "1960 - 2000"
+dat2000$year[1] <- "~1960 - 2000"
 
 fig3 <- dat2000 %>%
   ggplot() +
@@ -283,7 +283,7 @@ fig5 <- mg2014_gn %>%
   geom_point(color = "dark grey") +
   theme_tufte() +
   ylab("Extent of new mangrove colonization (kha)") +
-  xlab("Extent of non-converted mangrove (kha)") +
+  xlab("Extent of undisturbed mangrove (kha)") +
   stat_smooth(method = "lm", color = "red", size = 0.5, fill = "grey") +
   annotate("text", x = 12.5, y = 0.1, label = "Pearson Corr. = 0.87", col = "red") +
   theme(axis.title.x = element_text(family = "sans"),
@@ -291,3 +291,4 @@ fig5 <- mg2014_gn %>%
 
 fig5
 
+ggsave("./figs/fig5_nodata.jpg", fig5, width = 6, height = 5, units = c("in"), device = "jpeg")
