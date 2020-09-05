@@ -192,62 +192,6 @@ gdata::keep(proc_dir, raw_dir, scratch_dir, sure = T)
 
 #---------------------------------------------------
 
-####################################################
-## Model biomass recovery using Sasmito 2020 data ##
-####################################################
-
-library(nls2)
-library(propagate)
-library(readxl)
-
-# Data, provided by Sigit (what a guy!)
-
-dat <- read_xlsx("./data/raw/sigit_data.xlsx") %>%
-  dplyr::select(dataset_variable, yr = "regeneration age", agb = mean) %>%
-  filter(dataset_variable == "Aboveground biomass carbon stock") %>%
-  as.data.frame()
-
-# Model form is: y = a / (1 + b * e^-kx )
-
-model <- nls(agb ~ a / (1 + b * exp(1) ^ (-k * yr)), start=list(a = 140, b = 13, k = 0.1), data = dat)
-
-predictDat <- seq(0, max(dat$yr), by = 2)
-
-  
-dat %>%
-  ggplot(aes(x = yr, y = agb)) +
-  geom_point() +
-  geom_smooth(method = "nls", 
-              formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
-              method.args = list(start = c(a = 138.794, b = 25.162, k = 0.197)),
-              se = FALSE) +
-  theme_bw() +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank())
-
-prop1 <- predictNLS(model, newdata = data.frame(yr = predictDat))
-
-prop_df <- data.frame(yr = predictDat,
-                      prdct = prop1$summary$Prop.Mean.1,
-                      lwr = prop1$summary$`Prop.2.5%`,
-                      upr = prop1$summary$`Prop.97.5%`)
-
-eq1_mdlRuns <- write_csv(prop_df, "./data/processed/eq1_mdlRuns.csv")
-
-# Estimate biomass recovered at 15 years
-
-yr14val <- (138.7840 / (1 + 17.8151 * exp(1) ^ (-0.1765 * 14) ))
-
-# Estimate biomass recovered at 40 years
-
-yr50val <- (138.7840 / (1 + 17.8151 * exp(1) ^ (-0.1765 * 50) ))
-
-mean_AGB_rate <- 100 * yr14val / yr50val
-low_AGB_rate <- 100 * prop_df[prop_df$yr == 14, 3] / yr50val
-high_AGB_rate <- 100 * prop_df[prop_df$yr == 14, 4] / yr50val
-
-#------------------------------
-
 ###################################################################
 ## Calculate carbon stock losses and gains at the national scale ##
 ###################################################################
