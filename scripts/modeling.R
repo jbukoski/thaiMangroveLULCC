@@ -47,9 +47,8 @@ mg2014_gn <- st_read(paste0(proc_dir, "shapefiles/dstrct_gains_2014")) %>%
 #-----------------------------
 # Begin simulating carbon gains and losses
 
-
 summary <- data.frame()
-
+  
 for(i in 1:nrow(dstrcts_c_df)) {
   
   vals <- c()
@@ -57,7 +56,7 @@ for(i in 1:nrow(dstrcts_c_df)) {
   dstrct_ls <- mg2014_ls[i,]
   dstrct_gn <- mg2014_gn[i,]
   
-  for(j in 1:3000) {
+  for(j in 1:500) {
     
     act_yr <- round(runif(1, min = 1, max = 14), 0)
     agb_avg <- rnorm(1, mean = dstrct$AGB_AVG, sd = dstrct$AGB_SE * sqrt(40))
@@ -128,4 +127,25 @@ for(i in 1:nrow(dstrcts_c_df)) {
   
   summary <- rbind(summary, dstrct_df)
 
-  }
+}
+
+
+#----------------------------------
+# Examine where the simulation of gains and losses begins to stabilize
+
+my_seq <- seq(from = 4, to = 800, by = 2)
+
+test <- c()
+
+for(j in my_seq) {
+  
+  dat <- sample(vals_df$MGC_RCVR, j)
+  se <- plotrix::std.error(dat)
+  
+  test <- rbind(test, c(j, se))
+  
+}
+
+test <- as.data.frame(test)
+
+plot(test$V1, test$V2)
