@@ -1,4 +1,6 @@
-
+###############################################
+## Modeling of C changes associated with LCC ##
+###############################################
 
 library(sf)
 library(tidyverse)
@@ -68,14 +70,18 @@ for(i in 1:nrow(dstrcts_c_df)) {
                       rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 1], sd = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 2] * sqrt(4)))
     
     for(k in 1:length(agb_ls_coefs)) {
-      while(agb_ls_coefs[k] > 0) { agb_ls_coefs[k] <- rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[k, 1], sd = as.data.frame(summary(agb_ls_mdl)[[4]])[k, 2] * sqrt(4)) }
+      while(agb_ls_coefs[k] > 0) { 
+        agb_ls_coefs[k] <- rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[k, 1], sd = as.data.frame(summary(agb_ls_mdl)[[4]])[k, 2] * sqrt(4)) 
+        }
     }
     
     soc_ls_coefs <- c(rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[1, 1], sd = as.data.frame(summary(soc_ls_mdl)[[4]])[1, 2] * sqrt(34)),
                       rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 1], sd = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 2] * sqrt(34)))
     
     for(k in 1:length(soc_ls_coefs)) {
-      while(soc_ls_coefs[k] > 0) { soc_ls_coefs[k] <- rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[k, 1], sd = as.data.frame(summary(soc_ls_mdl)[[4]])[k, 2] * sqrt(34)) }
+      while(soc_ls_coefs[k] > 0) { 
+        soc_ls_coefs[k] <- rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[k, 1], sd = as.data.frame(summary(soc_ls_mdl)[[4]])[k, 2] * sqrt(34)) 
+        }
     }
     
     agb_gn_coefs <- c(rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[1, 1], sd = as.data.frame(summary(agb_gn_mdl)[[10]])[1, 2] * sqrt(59)),
@@ -83,14 +89,20 @@ for(i in 1:nrow(dstrcts_c_df)) {
                       rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[3, 1], sd = as.data.frame(summary(agb_gn_mdl)[[10]])[3, 2] * sqrt(59)))
     
     for(k in 1:length(agb_gn_coefs)) {
-      while(agb_gn_coefs[k] < 0) { agb_gn_coefs[k] <- rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[k, 1], sd = as.data.frame(summary(agb_gn_mdl)[[10]])[k, 2] * sqrt(59)) }
+      while(agb_gn_coefs[k] < 0) { 
+        agb_gn_coefs[k] <- rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[k, 1], sd = as.data.frame(summary(agb_gn_mdl)[[10]])[k, 2] * sqrt(59)) 
+        }
     }
     
     soc_gn_coefs <- c(rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 2] * sqrt(22)),
                       rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[2, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[2, 2] * sqrt(22)))
     
-    while(soc_gn_coefs[1] > 0) { soc_gn_coefs[1] <- rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 2] * sqrt(22)) }
-    while(soc_gn_coefs[2] < 0) { soc_gn_coefs[2] <- rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[2, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[2, 2] * sqrt(22)) }
+    while(soc_gn_coefs[1] > 0) { 
+      soc_gn_coefs[1] <- rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 2] * sqrt(22)) 
+      }
+    while(soc_gn_coefs[2] < 0) { 
+      soc_gn_coefs[2] <- rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[2, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[2, 2] * sqrt(22)) 
+      }
     
     agc_prsrvd <- agb_avg * exp(agb_ls_coefs[1] + agb_ls_coefs[2] * act_yr)
     soc_prsrvd <- soc_avg * exp(soc_ls_coefs[1] + soc_ls_coefs[2] * act_yr)
@@ -131,21 +143,39 @@ for(i in 1:nrow(dstrcts_c_df)) {
 
 
 #----------------------------------
-# Examine where the simulation of gains and losses begins to stabilize
+# Examine where the standard error of C losses, recovery, and gains stabilizes
 
-my_seq <- seq(from = 4, to = 800, by = 2)
+my_seq <- seq(from = 4, to = 500, by = 2)
 
-test <- c()
+n_sims <- c()
 
 for(j in my_seq) {
   
-  dat <- sample(vals_df$MGC_RCVR, j)
-  se <- plotrix::std.error(dat)
+  loss_dat <- sample(vals_df$MGC_LOSS, j, replace = F)
+  rcvr_dat <- sample(vals_df$MGC_RCVR, j, replace = F)
+  gain_dat <- sample(vals_df$MGC_GAIN, j, replace = F)
+  loss_se <- plotrix::std.error(loss_dat)
+  rcvr_se <- plotrix::std.error(rcvr_dat)
+  gain_se <- plotrix::std.error(gain_dat)
   
-  test <- rbind(test, c(j, se))
+  n_sims <- rbind(n_sims, c(j, loss_se, rcvr_se, gain_se))
   
 }
 
-test <- as.data.frame(test)
+n_sims_df <- as.data.frame(n_sims) %>%
+  rename("Loss" = V2,
+         "Recovery" = V3,
+         "Gain" = V4) %>%
+  pivot_longer(cols = "Loss":"Gain", names_to = "var", values_to = "se")
 
-plot(test$V1, test$V2)
+n_sims_df %>%
+  ggplot() +
+  geom_point(aes(x = V1, y = se, color = var)) +
+  xlab("Number of Simulations") +
+  ylab("Standard Error (Mg C/ha)") +
+  theme_bw() +
+  geom_vline(xintercept = 400, linetype = "dashed") +
+  theme(legend.position = c(0.6, 0.8),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.title = element_blank())

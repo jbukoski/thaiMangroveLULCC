@@ -22,9 +22,9 @@ agb_ls_plt <- agb_ls_dat %>%
   ggplot(aes(x = Age, y = LNRR)) +
   geom_point() +
   geom_smooth(method = "glm", formula = y ~ x) +
-  xlab("Time since disturbance (Years)") +
+  xlab("Time since LULCC (Years)") +
   ylab("ln(Response Ratio)") +
-  ggtitle("AGC Loss") +
+  ggtitle("a. AGC Loss") +
   theme_bw() +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
@@ -45,9 +45,9 @@ soc_ls_plt <- soc_ls_dat %>%
   ggplot(aes(x = Age, y = LNRR)) +
   geom_point() +
   geom_smooth(method = "glm", formula = y ~ x) +
-  xlab("Time since disturbance (Years)") +
+  xlab("Time since LULCC (Years)") +
   ylab("ln(Response Ratio)") +
-  ggtitle("SOC Loss") +
+  ggtitle("b. SOC Loss") +
   theme_bw() +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
@@ -74,7 +74,7 @@ agb_gn_dat <- read_xlsx("./data/raw/sigit_data.xlsx") %>%
 
 agb_gn_mdl <- nls(agb ~ a / (1 + b * exp(1) ^ (-k * yr)), start=list(a = 140, b = 13, k = 0.1), data = agb_gn_dat)
 
-predictDat <- seq(0, max(agb_gn_dat$yr), by = 2)
+#predictDat <- seq(0, max(agb_gn_dat$yr), by = 2)
 
 se_ribbon <- data.frame(yr = 1:70,
                         ymax = (138.79387 + 18.7) / (1 + (25.16169 - 18.1) * exp(1) ^ ((-0.19670 - 0.05) * 1:70)),
@@ -89,21 +89,21 @@ agb_gn_plt <- ggplot() +
               method.args = list(start = c(a = 138.794, b = 25.162, k = 0.197)),
               se = FALSE) +
   geom_point(data = agb_gn_dat, aes(x = yr, y = agb)) +
-  xlab("Time since disturbance (Years)") +
+  xlab("Time since LULCC (Years)") +
   ylab("Aboveground Biomass (Mg/ha)") +
-  ggtitle("AGC Recovery") +
+  ggtitle("c. AGC Recovery") +
   theme_bw() +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
 
 agb_gn_plt
 
-prop1 <- predictNLS(agb_gn_mdl, newdata = data.frame(yr = predictDat))
+#prop1 <- predictNLS(agb_gn_mdl, newdata = data.frame(yr = predictDat))
 
-prop_df <- data.frame(yr = predictDat,
-                      prdct = prop1$summary$Prop.Mean.1,
-                      lwr = prop1$summary$`Prop.2.5%`,
-                      upr = prop1$summary$`Prop.97.5%`)
+# prop_df <- data.frame(yr = predictDat,
+#                       prdct = prop1$summary$Prop.Mean.1,
+#                       lwr = prop1$summary$`Prop.2.5%`,
+#                       upr = prop1$summary$`Prop.97.5%`)
 
 eq1_mdlRuns <- write_csv(prop_df, "./data/processed/eq1_mdlRuns.csv")
 
@@ -121,9 +121,9 @@ soc_gn_plt <- soc_gn_dat %>%
   ggplot() +
   geom_point(aes(x = Age, y = LNRR)) + 
   geom_smooth(aes(x = Age, y = LNRR), formula = y ~ log(x), method = "glm") +
-  xlab("Time since disturbance (Years)") +
+  xlab("Time since LULCC (Years)") +
   ylab("ln(Response Ratio)") +
-  ggtitle("SOC Recovery") +
+  ggtitle("d. SOC Recovery") +
   theme_bw() +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
@@ -137,5 +137,7 @@ soc_gn_plt
 #---------------------------
 # Combine plots
 
-grid.arrange(agb_ls_plt, soc_ls_plt, agb_gn_plt, soc_gn_plt)
+all_plts <- grid.arrange(agb_ls_plt, soc_ls_plt, agb_gn_plt, soc_gn_plt)
+
+ggsave("./figs/fig4_models.jpg", all_plts, height = 6, width = 8, device = "jpeg")
   
