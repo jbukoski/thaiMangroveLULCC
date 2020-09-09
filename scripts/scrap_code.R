@@ -124,3 +124,50 @@ for(i in 1:nrow(dstrcts_sp)) {
   gc()
   
 }
+
+# Old biomass growth plot
+
+dat <- read_xlsx("./data/raw/sigit_data.xlsx") %>%
+  dplyr::select(dataset_variable, yr = "regeneration age", agb = mean) %>%
+  filter(dataset_variable == "Aboveground biomass carbon stock") %>%
+  as.data.frame()
+
+prop_df <- read_csv("./data/processed/eq1_mdlRuns.csv")
+
+fig3_growthMdl <- ggplot(dat, aes(yr, agb)) +
+  geom_point(color = "dark grey") +
+  geom_smooth(method = "nls",
+              method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
+                                 start = list(a = 140, b = 13, k = 0.1)),
+              data = dat,
+              se = FALSE,
+              color = "black") +
+  geom_smooth(method = "nls",
+              method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
+                                 start = list(a = 140, b = 13, k = 0.1)),
+              data = prop_df,
+              se = FALSE,
+              color = "black",
+              linetype = "dashed",
+              aes(x = yr, y = lwr)) +
+  geom_smooth(method = "nls",
+              method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
+                                 start = list(a = 140, b = 13, k = 0.1)),
+              data = prop_df,
+              se = FALSE,
+              color = "black",
+              linetype = "dashed",
+              aes(x = yr, y = upr)) +
+  ylab("AGC (Mg / ha)") +
+  xlab("Time Since Regeneration (Years)") +
+  annotate("text", x = 18, y = 225, label = "t = 14", col = "red") +
+  geom_vline(xintercept = 14, linetype = "dashed", color = "red") +
+  theme_tufte() +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        axis.title.x = element_text(family = "sans"),
+        axis.title.y = element_text(family = "sans"))
+
+fig3_growthMdl
+
+ggsave("./figs/fig2_growth.jpg", fig3_growthMdl, width = 6, height = 4, units = c("in"), device = "jpeg")

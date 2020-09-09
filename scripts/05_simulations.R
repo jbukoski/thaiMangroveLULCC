@@ -54,54 +54,53 @@ summary <- data.frame()
 for(i in 1:nrow(dstrcts_c_df)) {
   
   vals <- c()
+  agc_ls_coefs_vctr <- c()
+  soc_ls_coefs_vctr <- c()
+  agc_gn_coefs_vctr <- c()
+  soc_gn_coefs_vctr <- c()
+  
   dstrct <- dstrcts_c_df[i,]
   dstrct_ls <- mg2014_ls[i,]
   dstrct_gn <- mg2014_gn[i,]
   
-  for(j in 1:500) {
+  for(j in 1:100) {
+    
+    agb_avg <- -1
+    soc_avg <- -1
     
     act_yr <- round(runif(1, min = 1, max = 14), 0)
-    agb_avg <- rnorm(1, mean = dstrct$AGB_AVG, sd = dstrct$AGB_SE * sqrt(40))
-    agb_avg <- ifelse(agb_avg > 0, agb_avg, 0)
-    soc_avg <- rnorm(1, mean = dstrct$SOC_AVG, sd = dstrct$SOC_SE * sqrt(40))
-    soc_avg <- ifelse(soc_avg > 0, soc_avg, 0)
     
-    agb_ls_coefs <- c(rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[1, 1], sd = as.data.frame(summary(agb_ls_mdl)[[4]])[1, 2] * sqrt(4)),
-                      rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 1], sd = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 2] * sqrt(4)))
+    while(agb_avg < 0 & !is.na(agb_avg)) { agb_avg <- rnorm(1, mean = dstrct$AGB_AVG, sd = dstrct$AGB_SE * sqrt(40)) }
+    while(soc_avg < 0 & !is.na(soc_avg)) { soc_avg <- rnorm(1, mean = dstrct$SOC_AVG, sd = dstrct$SOC_SE * sqrt(40)) }
     
-    for(k in 1:length(agb_ls_coefs)) {
-      while(agb_ls_coefs[k] > 0) { 
-        agb_ls_coefs[k] <- rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[k, 1], sd = as.data.frame(summary(agb_ls_mdl)[[4]])[k, 2] * sqrt(4)) 
-        }
-    }
+    agb_ls_coefs <- c(rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[1, 1], sd = as.data.frame(summary(agb_ls_mdl)[[4]])[1, 2] * sqrt(6)),
+                      rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 1], sd = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 2] * sqrt(6)))
+    
+    while(agb_ls_coefs[1] > 0) { agb_ls_coefs[1] <- 0 }
+    while(agb_ls_coefs[2] > 0) { agb_ls_coefs[2] <- rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 1], sd = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 2] * sqrt(4)) }
     
     soc_ls_coefs <- c(rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[1, 1], sd = as.data.frame(summary(soc_ls_mdl)[[4]])[1, 2] * sqrt(34)),
                       rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 1], sd = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 2] * sqrt(34)))
     
-    for(k in 1:length(soc_ls_coefs)) {
-      while(soc_ls_coefs[k] > 0) { 
-        soc_ls_coefs[k] <- rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[k, 1], sd = as.data.frame(summary(soc_ls_mdl)[[4]])[k, 2] * sqrt(34)) 
-        }
-    }
+    while(soc_ls_coefs[1] > 0) { soc_ls_coefs[1] <- 0}
+    while(soc_ls_coefs[2] > 0) { soc_ls_coefs[2] <- rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 1], sd = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 2] * sqrt(34)) }
     
     agb_gn_coefs <- c(rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[1, 1], sd = as.data.frame(summary(agb_gn_mdl)[[10]])[1, 2] * sqrt(59)),
                       rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[2, 1], sd = as.data.frame(summary(agb_gn_mdl)[[10]])[2, 2] * sqrt(59)),
                       rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[3, 1], sd = as.data.frame(summary(agb_gn_mdl)[[10]])[3, 2] * sqrt(59)))
     
     for(k in 1:length(agb_gn_coefs)) {
-      while(agb_gn_coefs[k] < 0) { 
-        agb_gn_coefs[k] <- rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[k, 1], sd = as.data.frame(summary(agb_gn_mdl)[[10]])[k, 2] * sqrt(59)) 
+      if(agb_gn_coefs[k] < 0) {
+        agb_gn_coefs[k] <- 0
+        #agb_gn_coefs[k] <- rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[k, 1], sd = as.data.frame(summary(agb_gn_mdl)[[10]])[k, 2] * sqrt(59))
         }
     }
     
     soc_gn_coefs <- c(rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 2] * sqrt(22)),
                       rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[2, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[2, 2] * sqrt(22)))
     
-    while(soc_gn_coefs[1] > 0) { 
-      soc_gn_coefs[1] <- rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 2] * sqrt(22)) 
-      }
-    while(soc_gn_coefs[2] < 0) { 
-      soc_gn_coefs[2] <- rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[2, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[2, 2] * sqrt(22)) 
+    while(soc_gn_coefs[1] > 0) {
+      soc_gn_coefs[1] <- rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 2] * sqrt(22))
       }
     
     agc_prsrvd <- agb_avg * exp(agb_ls_coefs[1] + agb_ls_coefs[2] * act_yr)
@@ -112,25 +111,40 @@ for(i in 1:nrow(dstrcts_c_df)) {
     
     mgc_loss <- -1 * (agb_avg + soc_avg + frgn_sqstr - agc_prsrvd - soc_prsrvd)
     mgc_rcvr <- agc_gained + soc_gained - agc_prsrvd - soc_prsrvd
+    mgc_rcvr <- ifelse(mgc_rcvr > 0, mgc_rcvr, 0)
     mgc_expn <- agc_gained + soc_gained
+    mgc_expn <- ifelse(mgc_expn > 0, mgc_expn, 0)
     
-    vals <- rbind(vals, c(dstrct$ADM2_ID, j, dstrct_ls$ttl_ls, dstrct_gn$ttl_gn - dstrct_gn$nodata, dstrct_gn$nodata, mgc_loss, mgc_rcvr, mgc_expn))
+    vals <- rbind(vals, c(dstrct$ADM2_ID, j, dstrct_ls$ttl_ls, dstrct_gn$ttl_gn - dstrct_gn$nodata, dstrct_gn$nodata, 
+                          act_yr, agc_prsrvd, soc_prsrvd, agc_gained, soc_gained, frgn_sqstr, mgc_loss, mgc_rcvr, mgc_expn,
+                          agb_avg, soc_avg))
+    
+    agc_ls_coefs_vctr <- rbind(agc_ls_coefs_vctr, agb_ls_coefs)
+    soc_ls_coefs_vctr <- rbind(soc_ls_coefs_vctr, soc_ls_coefs)
+    agc_gn_coefs_vctr <- rbind(agc_gn_coefs_vctr, agb_gn_coefs)
+    soc_gn_coefs_vctr <- rbind(soc_gn_coefs_vctr, soc_gn_coefs)
+    
     
   }
   
   vals_df <- as.data.frame(vals) 
   
-  colnames(vals_df) <- c("ADM2_ID", "j", "LOSS", "GAIN", "NODATA", "MGC_LOSS", "MGC_RCVR", "MGC_GAIN")
+  colnames(vals_df) <- c("ADM2_ID", "j", "LOSS", "GAIN", "NODATA", "ACT_YR",
+                         "AGC_PRSRVD", "SOC_PRSRVD", "AGC_GAINED", "SOC_GAINED", "FRGN_SQSTR", 
+                         "MGC_LOSS", "MGC_RCVR", "MGC_GAIN", "AGC_AVG", "SOC_AVG")
   
   dstrct_df <- vals_df %>%
     left_join(dplyr::select(dstrcts_c_df, ADM1_EN:ADM2_ID)) %>%
-    mutate(MGC_LOSS_AVG = mean(MGC_LOSS, na.rm = T),
+    mutate(ACT_YR = mean(ACT_YR, na.rm = T),
+           AGC_AVG = mean(AGC_AVG, na.rm = T),
+           SOC_AVG = mean(SOC_AVG, na.rm = T),
+           MGC_LOSS_AVG = mean(MGC_LOSS, na.rm = T),
            MGC_LOSS_SE = plotrix::std.error(MGC_LOSS, na.rm = T),
            MGC_RCVR_AVG = mean(MGC_RCVR, na.rm = T),
            MGC_RCVR_SE = plotrix::std.error(MGC_RCVR, na.rm = T),
            MGC_GAIN_AVG = mean(MGC_GAIN, na.rm = T),
            MGC_GAIN_SE = plotrix::std.error(MGC_GAIN, na.rm = T)) %>%
-    dplyr::select(ADM1_EN, ADM2_EN, ADM2_ID, LOSS:NODATA, MGC_LOSS_AVG:MGC_GAIN_SE) %>%
+    dplyr::select(ADM1_EN, ADM2_EN, ADM2_ID, LOSS:ACT_YR, AGC_AVG:MGC_GAIN_SE) %>%
     mutate(GAIN = ifelse(is.na(GAIN), 0, GAIN),
            NODATA = ifelse(is.na(NODATA), 0, NODATA)) %>%
     distinct() %>%
@@ -140,6 +154,13 @@ for(i in 1:nrow(dstrcts_c_df)) {
   summary <- rbind(summary, dstrct_df)
 
 }
+
+soc_gn_coefs_vctr %>%
+  as.data.frame() %>%
+  summarize(V1_avg = mean(V1),
+            V1_se = plotrix::std.error(V1),
+            V2_avg = mean(V2),
+            V2_se = plotrix::std.error(V2))
 
 
 #----------------------------------
@@ -179,3 +200,55 @@ n_sims_df %>%
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         legend.title = element_blank())
+
+#-------------------------------------
+# Write out table to feed into plots
+
+loss_c <- sum(summary$LOSS * summary$MGC_LOSS_AVG, na.rm = T) / 1000000
+loss_c_se <- sum(summary$LOSS * summary$MGC_LOSS_SE, na.rm = T) / 1000000
+
+gain_c <- sum(summary$NODATA * summary$MGC_GAIN_AVG, na.rm = T) / 1000000
+gain_c_se <- sum(summary$NODATA * summary$MGC_GAIN_SE, na.rm = T) / 1000000
+
+rcvr_c <- sum(summary$GAIN * summary$MGC_RCVR_AVG, na.rm = T) / 1000000
+rcvr_c_se <- sum(summary$GAIN * summary$MGC_RCVR_SE, na.rm = T) / 1000000
+
+net_c <- sum(summary$NET_MGC, na.rm = T)  / 1000000
+net_c_se <- sum(summary$NET_MGC_SE, na.rm = T)  / 1000000
+
+# Calculate net loss numbers
+
+net_ls <- sum(mg2000$mangrov, na.rm = T) - sum(mg2014$mangrov, na.rm = T)
+net_ls_c <- mean(summary$MGC_LOSS_AVG, na.rm = T)
+net_ls_c_se <- sqrt(sum(summary$MGC_LOSS_SE ^2, na.rm = T))
+
+net_ls * net_ls_c / 1000000
+net_ls * net_ls_c_se / 1000000
+
+# Calculate historical loss numbers
+
+hist_nums <- mg2000 %>%
+  st_set_geometry(NULL) %>%
+  select(ADM2_EN, mangrov, total, othr_fr, mudflts) %>%
+  mutate(othr_fr = ifelse(is.na(othr_fr), 0, othr_fr),
+         mudflts = ifelse(is.na(mudflts), 0, mudflts)) %>%
+  mutate(historic_loss = total - (mangrov + othr_fr + mudflts)) %>%
+  left_join(select(summary, ADM2_EN, MGC_LOSS_AVG, MGC_LOSS_SE)) %>%
+  mutate(hist_ls_c = historic_loss * MGC_LOSS_AVG,
+         hist_ls_c_se = historic_loss * MGC_LOSS_SE)
+
+hist_c <- sum(hist_nums$hist_ls_c, na.rm = T) / 1000000
+hist_c_se <- sum(hist_nums$hist_ls_c_se, na.rm = T) / 1000000
+
+# Combine all numbers for summary plot
+
+allPrdsSmry <- data.frame(year = c("pre-1960 - 2000", "2000-2014, LULCC", "2000-2014, LULCC", "2000-2014, net"),
+                          carbon = c(hist_c, loss_c, gain_c + rcvr_c, net_ls * net_ls_c / 1000000),
+                          error = c(hist_c_se, loss_c_se, gain_c_se + rcvr_c_se, net_ls * net_ls_c_se / 1000000),
+                          net = c(NA, net_c, net_c, net_ls * net_ls_c / 1000000),
+                          style = c("Loss", "Loss", "Gain", "Net"))
+
+allPrdsSmry
+
+write_csv(allPrdsSmry, "./data/processed/allPrdsSmry.csv")
+

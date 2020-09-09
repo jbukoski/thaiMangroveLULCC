@@ -122,54 +122,88 @@ ggsave("./figs/f1_loss_map.jpg", f1, width = 10.2, height = 13.2, units = c("in"
 
 #-----------------------------------------------
 
-###################################
-## Fig. 2 -  Biomass growth plot ##
-###################################
+#########################################
+## Fig. 2 -  Carbon Gain & Loss Models ##
+#########################################
 
-dat <- read_xlsx("./data/raw/sigit_data.xlsx") %>%
+agb_ls_dat <- read_csv("./data/raw/agb_loss.csv", col_names = c("Age", "LNRR")) %>%
+  mutate(Age = round(Age, 0))
+
+soc_ls_dat <- read_csv("./data/raw/soc_loss.csv", col_names = c("Age", "LNRR")) %>%
+  mutate(Age = round(Age, 0))
+
+agb_gn_dat <- read_xlsx("./data/raw/sigit_data.xlsx") %>%
   dplyr::select(dataset_variable, yr = "regeneration age", agb = mean) %>%
   filter(dataset_variable == "Aboveground biomass carbon stock") %>%
   as.data.frame()
 
-prop_df <- read_csv("./data/processed/eq1_mdlRuns.csv")
+soc_gn_dat <- read_csv("./data/raw/soc_recovery.csv") %>%
+  dplyr::select(Study, Age, LNRR)
 
-fig3_growthMdl <- ggplot(dat, aes(yr, agb)) +
-  geom_point(color = "dark grey") +
-  geom_smooth(method = "nls",
-              method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
-                                 start = list(a = 140, b = 13, k = 0.1)),
-              data = dat,
-              se = FALSE,
-              color = "black") +
-  geom_smooth(method = "nls",
-              method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
-                                 start = list(a = 140, b = 13, k = 0.1)),
-              data = prop_df,
-              se = FALSE,
-              color = "black",
-              linetype = "dashed",
-              aes(x = yr, y = lwr)) +
-  geom_smooth(method = "nls",
-              method.args = list(formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
-                                 start = list(a = 140, b = 13, k = 0.1)),
-              data = prop_df,
-              se = FALSE,
-              color = "black",
-              linetype = "dashed",
-              aes(x = yr, y = upr)) +
-  ylab("AGC (Mg / ha)") +
-  xlab("Time Since Regeneration (Years)") +
-  annotate("text", x = 18, y = 225, label = "t = 14", col = "red") +
-  geom_vline(xintercept = 14, linetype = "dashed", color = "red") +
-  theme_tufte() +
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major = element_blank(),
-        axis.title.x = element_text(family = "sans"),
-        axis.title.y = element_text(family = "sans"))
+# Build the plots
 
-fig3_growthMdl
+agb_ls_plt <- agb_ls_dat %>%
+  ggplot(aes(x = Age, y = LNRR)) +
+  geom_point() +
+  geom_smooth(method = "glm", formula = y ~ x) +
+  xlab("Time since LULCC (Years)") +
+  ylab("ln(Response Ratio)") +
+  ggtitle("a. AGC Loss") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
-ggsave("./figs/fig2_growth.jpg", fig3_growthMdl, width = 6, height = 4, units = c("in"), device = "jpeg")
+soc_ls_plt <- soc_ls_dat %>%
+  ggplot(aes(x = Age, y = LNRR)) +
+  geom_point() +
+  geom_smooth(method = "glm", formula = y ~ x) +
+  xlab("Time since LULCC (Years)") +
+  ylab("ln(Response Ratio)") +
+  ggtitle("b. SOC Loss") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+
+se_ribbon <- data.frame(yr = 1:70,
+                        ymax = (138.79387 + 18.7) / (1 + (25.16169 - 18.1) * exp(1) ^ ((-0.19670 - 0.05) * 1:70)),
+                        ymin = (138.79387 - 18.7) / (1 + (25.16169 + 18.1) * exp(1) ^ ((-0.19670 + 0.05) * 1:70)))
+
+agb_gn_plt <- ggplot() +
+  geom_ribbon(data = se_ribbon, aes(x = yr, ymin = ymin, ymax = ymax), fill = "grey85") +
+  geom_smooth(data = agb_gn_dat,
+              method = "nls",
+              mapping = aes(x = yr, y = agb),
+              formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
+              method.args = list(start = c(a = 138.794, b = 25.162, k = 0.197)),
+              se = FALSE) +
+  geom_point(data = agb_gn_dat, aes(x = yr, y = agb)) +
+  xlab("Time since LULCC (Years)") +
+  ylab("Aboveground Biomass (Mg/ha)") +
+  ggtitle("c. AGC Recovery") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+soc_gn_plt <- soc_gn_dat %>%
+  ggplot() +
+  geom_point(aes(x = Age, y = LNRR)) + 
+  geom_smooth(aes(x = Age, y = LNRR), formula = y ~ log(x), method = "glm") +
+  xlab("Time since LULCC (Years)") +
+  ylab("ln(Response Ratio)") +
+  ggtitle("d. SOC Recovery") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+# Combine the plots and save to file.
+
+all_plts <- grid.arrange(agb_ls_plt, soc_ls_plt, agb_gn_plt, soc_gn_plt)
+
+ggsave("./figs/fig4_models.jpg", all_plts, height = 6, width = 8, device = "jpeg")
 
 
 #----------------------------------------
