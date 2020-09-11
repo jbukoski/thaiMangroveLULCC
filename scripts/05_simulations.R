@@ -73,34 +73,31 @@ for(i in 1:nrow(dstrcts_c_df)) {
     while(agb_avg < 0 & !is.na(agb_avg)) { agb_avg <- rnorm(1, mean = dstrct$AGB_AVG, sd = dstrct$AGB_SE * sqrt(40)) }
     while(soc_avg < 0 & !is.na(soc_avg)) { soc_avg <- rnorm(1, mean = dstrct$SOC_AVG, sd = dstrct$SOC_SE * sqrt(40)) }
     
-    agb_ls_coefs <- c(rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[1, 1], sd = as.data.frame(summary(agb_ls_mdl)[[4]])[1, 2] * sqrt(6)),
-                      rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 1], sd = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 2] * sqrt(6)))
+    agb_ls_coefs <- c(rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[1, 1], sd = sqrt(vcov(agb_ls_mdl)[1, 1])),
+                      rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 1], sd = sqrt(vcov(agb_ls_mdl)[2, 2])))
     
     while(agb_ls_coefs[1] > 0) { agb_ls_coefs[1] <- 0 }
-    while(agb_ls_coefs[2] > 0) { agb_ls_coefs[2] <- rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 1], sd = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 2] * sqrt(4)) }
+    while(agb_ls_coefs[2] > 0) { agb_ls_coefs[2] <- rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 1], sd = sqrt(vcov(agb_ls_mdl)[2, 2])) }
     
-    soc_ls_coefs <- c(rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[1, 1], sd = as.data.frame(summary(soc_ls_mdl)[[4]])[1, 2] * sqrt(34)),
-                      rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 1], sd = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 2] * sqrt(34)))
+    soc_ls_coefs <- c(rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[1, 1], sd = sqrt(vcov(soc_ls_mdl)[1, 1])),
+                      rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 1], sd = sqrt(vcov(soc_ls_mdl)[2, 2])))
     
     while(soc_ls_coefs[1] > 0) { soc_ls_coefs[1] <- 0}
-    while(soc_ls_coefs[2] > 0) { soc_ls_coefs[2] <- rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 1], sd = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 2] * sqrt(34)) }
+    while(soc_ls_coefs[2] > 0) { soc_ls_coefs[2] <- rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 1], sd = sqrt(vcov(soc_ls_mdl)[2, 2])) }
     
-    agb_gn_coefs <- c(rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[1, 1], sd = as.data.frame(summary(agb_gn_mdl)[[10]])[1, 2] * sqrt(59)),
-                      rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[2, 1], sd = as.data.frame(summary(agb_gn_mdl)[[10]])[2, 2] * sqrt(59)),
-                      rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[3, 1], sd = as.data.frame(summary(agb_gn_mdl)[[10]])[3, 2] * sqrt(59)))
+    agb_gn_coefs <- c(rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[1, 1], sd = sqrt(vcov(agb_gn_mdl)[1, 1])),
+                      rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[2, 1], sd = sqrt(vcov(agb_gn_mdl)[2, 2])),
+                      rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[3, 1], sd = sqrt(vcov(agb_gn_mdl)[3, 3])))
     
     for(k in 1:length(agb_gn_coefs)) {
-      if(agb_gn_coefs[k] < 0) {
-        agb_gn_coefs[k] <- 0
-        #agb_gn_coefs[k] <- rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[k, 1], sd = as.data.frame(summary(agb_gn_mdl)[[10]])[k, 2] * sqrt(59))
-        }
+      if(agb_gn_coefs[k] < 0) { agb_gn_coefs[k] <- 0 }
     }
     
-    soc_gn_coefs <- c(rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 2] * sqrt(22)),
-                      rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[2, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[2, 2] * sqrt(22)))
+    soc_gn_coefs <- c(rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[4]])[1, 1], sd = sqrt(vcov(soc_gn_mdl)[1, 1])),
+                      rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[4]])[2, 1], sd = sqrt(vcov(soc_gn_mdl)[2, 2])))
     
     while(soc_gn_coefs[1] > 0) {
-      soc_gn_coefs[1] <- rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 1], sd = as.data.frame(summary(soc_gn_mdl)[[12]])[1, 2] * sqrt(22))
+      soc_gn_coefs[1] <- rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[4]])[1, 1], sd = sqrt(vcov(soc_gn_mdl)[2, 2]))
       }
     
     agc_prsrvd <- agb_avg * exp(agb_ls_coefs[1] + agb_ls_coefs[2] * act_yr)
@@ -112,11 +109,11 @@ for(i in 1:nrow(dstrcts_c_df)) {
     mgc_loss <- -1 * (agb_avg + soc_avg + frgn_sqstr - agc_prsrvd - soc_prsrvd)
     mgc_rcvr <- agc_gained + soc_gained - agc_prsrvd - soc_prsrvd
     mgc_rcvr <- ifelse(mgc_rcvr > 0, mgc_rcvr, 0)
-    mgc_expn <- agc_gained + soc_gained
-    mgc_expn <- ifelse(mgc_expn > 0, mgc_expn, 0)
+    mgc_gain <- agc_gained + soc_gained - agc_prsrvd - soc_prsrvd
+    mgc_gain <- ifelse(mgc_gain > 0, mgc_gain, 0)
     
     vals <- rbind(vals, c(dstrct$ADM2_ID, j, dstrct_ls$ttl_ls, dstrct_gn$ttl_gn - dstrct_gn$nodata, dstrct_gn$nodata, 
-                          act_yr, agc_prsrvd, soc_prsrvd, agc_gained, soc_gained, frgn_sqstr, mgc_loss, mgc_rcvr, mgc_expn,
+                          act_yr, agc_prsrvd, soc_prsrvd, agc_gained, soc_gained, frgn_sqstr, mgc_loss, mgc_rcvr, mgc_gain,
                           agb_avg, soc_avg))
     
     agc_ls_coefs_vctr <- rbind(agc_ls_coefs_vctr, agb_ls_coefs)
@@ -155,12 +152,12 @@ for(i in 1:nrow(dstrcts_c_df)) {
 
 }
 
-soc_gn_coefs_vctr %>%
+soc_ls_coefs_vctr %>%
   as.data.frame() %>%
   summarize(V1_avg = mean(V1),
-            V1_se = plotrix::std.error(V1),
+            V1_se = sqrt(var(V1)),
             V2_avg = mean(V2),
-            V2_se = plotrix::std.error(V2))
+            V2_se = sqrt(var(V2)))
 
 
 #----------------------------------

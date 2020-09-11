@@ -55,6 +55,6 @@ agb_gn_mdl <- nls(agb ~ a / (1 + b * exp(1) ^ (-k * yr)), start=list(a = 140, b 
 soc_gn_dat <- read_csv("./data/raw/soc_recovery.csv") %>%
   dplyr::select(Study, Age, LNRR)
 
-soc_gn_mdl <- glm(LNRR ~ log(Age), data = soc_gn_dat)
+soc_gn_mdl <- lm(LNRR ~ log(Age), data = soc_gn_dat)
 
 rm(agb_gn_dat, agb_ls_dat, soc_gn_dat, soc_ls_dat)

@@ -188,7 +188,7 @@ agb_gn_plt <- ggplot() +
 soc_gn_plt <- soc_gn_dat %>%
   ggplot() +
   geom_point(aes(x = Age, y = LNRR)) + 
-  geom_smooth(aes(x = Age, y = LNRR), formula = y ~ log(x), method = "glm") +
+  geom_smooth(aes(x = Age, y = LNRR), formula = y ~ log(x), method = "lm") +
   xlab("Time since LULCC (Years)") +
   ylab("ln(Response Ratio)") +
   ggtitle("d. SOC Recovery") +
