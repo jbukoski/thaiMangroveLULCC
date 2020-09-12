@@ -114,7 +114,7 @@ for(i in 1:nrow(dstrcts_c_df)) {
     
     vals <- rbind(vals, c(dstrct$ADM2_ID, j, dstrct_ls$ttl_ls, dstrct_gn$ttl_gn - dstrct_gn$nodata, dstrct_gn$nodata, 
                           act_yr, agc_prsrvd, soc_prsrvd, agc_gained, soc_gained, frgn_sqstr, mgc_loss, mgc_rcvr, mgc_gain,
-                          agb_avg, soc_avg))
+                          agb_avg, soc_avg, agc_gained, soc_gained))
     
     agc_ls_coefs_vctr <- rbind(agc_ls_coefs_vctr, agb_ls_coefs)
     soc_ls_coefs_vctr <- rbind(soc_ls_coefs_vctr, soc_ls_coefs)
@@ -128,7 +128,7 @@ for(i in 1:nrow(dstrcts_c_df)) {
   
   colnames(vals_df) <- c("ADM2_ID", "j", "LOSS", "GAIN", "NODATA", "ACT_YR",
                          "AGC_PRSRVD", "SOC_PRSRVD", "AGC_GAINED", "SOC_GAINED", "FRGN_SQSTR", 
-                         "MGC_LOSS", "MGC_RCVR", "MGC_GAIN", "AGC_AVG", "SOC_AVG")
+                         "MGC_LOSS", "MGC_RCVR", "MGC_GAIN", "AGC_AVG", "SOC_AVG", "GROSS_AGC_GAIN", "GROSS_SOC_GAIN")
   
   dstrct_df <- vals_df %>%
     left_join(dplyr::select(dstrcts_c_df, ADM1_EN:ADM2_ID)) %>%
@@ -140,8 +140,10 @@ for(i in 1:nrow(dstrcts_c_df)) {
            MGC_RCVR_AVG = mean(MGC_RCVR, na.rm = T),
            MGC_RCVR_SE = plotrix::std.error(MGC_RCVR, na.rm = T),
            MGC_GAIN_AVG = mean(MGC_GAIN, na.rm = T),
-           MGC_GAIN_SE = plotrix::std.error(MGC_GAIN, na.rm = T)) %>%
-    dplyr::select(ADM1_EN, ADM2_EN, ADM2_ID, LOSS:ACT_YR, AGC_AVG:MGC_GAIN_SE) %>%
+           MGC_GAIN_SE = plotrix::std.error(MGC_GAIN, na.rm = T),
+           GRS_GAIN_AVG = mean(GROSS_AGC_GAIN, na.rm = T) + mean(GROSS_SOC_GAIN, na.rm = T),
+           GRS_GAIN_SE = plotrix::std.error(GROSS_AGC_GAIN, na.rm = T) + plotrix::std.error(GROSS_SOC_GAIN, na.rm = T)) %>% 
+    dplyr::select(ADM1_EN, ADM2_EN, ADM2_ID, LOSS:ACT_YR, AGC_AVG, SOC_AVG, MGC_LOSS_AVG:GRS_GAIN_SE) %>%
     mutate(GAIN = ifelse(is.na(GAIN), 0, GAIN),
            NODATA = ifelse(is.na(NODATA), 0, NODATA)) %>%
     distinct() %>%
@@ -249,3 +251,24 @@ allPrdsSmry
 
 write_csv(allPrdsSmry, "./data/processed/allPrdsSmry.csv")
 
+#----------------------------
+# Calculate net change
+
+extant_c_2000 <- mg2000 %>%
+  st_set_geometry(NULL) %>%
+  mutate(mgc2000 = mangrov * (AGB_AVG + SOC_AVG),
+         mgc2000_se = mangrov * (AGB_SE + SOC_SE)) %>%
+  dplyr::select(mgc2000, mgc2000_se) %>%
+  summarize(mgc2000_ttl = sum(mgc2000, na.rm = T) / 1000000,
+            mgc2000_ttl_se = sum(mgc2000_se, na.rm = T) / 1000000)
+
+extant_c_2014 <- mg2014_gn %>%
+  left_join(select(summary, ADM2_EN, GAIN, NODATA, GRS_GAIN_AVG, GRS_GAIN_SE)) %>%
+  mutate(mgc2014 = mangrov * (AGB_AVG + SOC_AVG) + ((GAIN + NODATA) * GRS_GAIN_AVG),
+         mgc2014_se = mangrov * (AGB_SE + SOC_SE) + ((GAIN + NODATA) * GRS_GAIN_SE)) %>%
+  dplyr::select(mgc2014, mgc2014_se) %>%
+  ungroup() %>%
+  summarize(mgc2014_ttl = sum(mgc2014, na.rm = T) / 1000000,
+            mgc2014_ttl_se = sum(mgc2014_se, na.rm = T) / 1000000)
+
+(extant_c_2000 - extant_c_2014) / extant_c_2000   # Does not include preserved carbon in deforested areas.
