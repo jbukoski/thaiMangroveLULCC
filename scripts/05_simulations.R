@@ -251,6 +251,15 @@ allPrdsSmry
 
 write_csv(allPrdsSmry, "./data/processed/allPrdsSmry.csv")
 
+#------------------------------
+# Summary
+
+smry4rstrtn <- summary %>%
+  dplyr::select(ADM1_EN:ADM2_ID, ACT_YR, AGC_AVG, SOC_AVG, MGC_GAIN_AVG, MGC_GAIN_SE) %>%
+  left_join(select(st_set_geometry(mg2014, NULL), ADM2_EN, aqucltr, agrcltr, mangrov, abandnd))
+
+write_csv(smry4rstrtn, "./data/processed/smry4rstrtn.csv")
+
 #----------------------------
 # Calculate net change
 
