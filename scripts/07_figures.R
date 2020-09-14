@@ -326,3 +326,7 @@ fig5 <- mg2014_gn %>%
 fig5
 
 ggsave("./figs/fig5_nodata.jpg", fig5, width = 6, height = 5, units = c("in"), device = "jpeg")
+
+#-----------------------
+
+rm(list = ls())
