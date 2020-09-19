@@ -329,6 +329,33 @@ fig5
 
 ggsave("./figs/fig5_nodata.jpg", fig5, width = 6, height = 5, units = c("in"), device = "jpeg")
 
+#-----------------------------
+# Plot of number of simulations against standard error for Random Spatial Fields
+
+ses <- read_csv("./data/processed/rsf_stderrs.csv")
+  
+colnames(ses) <- c("n", "District 1", "District 2", "District 3")
+
+ses <- ses %>%
+  pivot_longer(cols = c("District 1", "District 2", "District 3"), names_to = "district", values_to = "se")
+
+fig_s2 <- ses %>%
+  ggplot() +
+  geom_point(aes(x = n, y = se, col = district)) +
+  geom_vline(aes(xintercept = 40), lty = "dashed") +
+  scale_color_manual(values = c("#1B7636", "orange", "#A24593")) +
+  xlab("Number of Simulations") +
+  ylab("Standard Error (Mg C/ha)") +
+  theme_bw() +
+  theme(legend.position = c(0.8, 0.8),
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+fig_s2
+
+ggsave("./figs/fig_s2.jpg", fig_s2, width = 5, height = 4, units = c("in"), device = "jpeg")
+
 #-----------------------
 
 rm(list = ls())

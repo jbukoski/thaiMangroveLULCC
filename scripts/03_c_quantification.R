@@ -94,6 +94,37 @@ clusterEvalQ(cl, sink(paste0("~/Desktop/log_", Sys.getpid(), ".txt")))
 libs <- c("raster", "rgdal", "rgeos", "sp", "sf", 
           "tidyverse", "geostatsp", "RandomFields", "SpaDES")
 
+d1 <- calcDistrictCarbon(dstrcts, agb, agb_rmse, 1)
+d2 <- calcDistrictCarbon(dstrcts, agb, agb_rmse, 2)
+d3 <- calcDistrictCarbon(dstrcts, agb, agb_rmse, 3)
+
+v1 <- as.numeric(d1[2:81])
+v2 <- as.numeric(d1[2:81])
+v3 <- as.numeric(d1[2:81])
+
+ses <- data.frame(n = numeric(), se = numeric())
+
+for(j  in 3:80) {
+  
+  s1 <- sample(v1, j)
+  s2 <- sample(v2, j)
+  s3 <- sample(v3, j)
+  
+  se1 <- plotrix::std.error(s1)
+  se2 <- plotrix::std.error(s2)
+  se3 <- plotrix::std.error(s3)
+  
+  out <- c(j, se1, se2, se3)
+  
+  ses <- rbind(ses, out)
+  
+}
+
+colnames(ses) <- c("n", "d1", "d2", "d3")
+
+write_csv(ses, "./data/processed/rsf_stderrs.csv")
+
+
 # Calculate district level C averages and standard errors (took approximately 3 hrs distributed across 3 cores)
 
 agb_vals <- foreach(i = 1:nrow(dstrcts), .packages = libs, .combine = "rbind") %dopar% { calcDistrictCarbon(dstrcts, agb, agb_rmse, i) }
