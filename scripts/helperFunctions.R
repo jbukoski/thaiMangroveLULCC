@@ -9,7 +9,7 @@ calcDistrictCarbon <- function(polys, rast, rast_rmse, i) {
   rast_crop <- crop(rast, shp)
   rast_buff <- crop(rast, st_buffer(shp, 0.015))
   rast_mean <- mean(getValues(rast_crop), na.rm = T)
-  
+    
   if(is.finite(rast_mean)) {
     
     #---------
