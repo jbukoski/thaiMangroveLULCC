@@ -52,7 +52,7 @@ mg2014_gn <- st_read(paste0(proc_dir, "shapefiles/dstrct_gains_2014")) %>%
 summary <- data.frame()
   
 for(i in 1:nrow(dstrcts_c_df)) {
-  
+
   vals <- c()
   agc_ls_coefs_vctr <- c()
   soc_ls_coefs_vctr <- c()
@@ -63,46 +63,44 @@ for(i in 1:nrow(dstrcts_c_df)) {
   dstrct_ls <- mg2014_ls[i,]
   dstrct_gn <- mg2014_gn[i,]
   
+  #for(j in 1:100) {
   for(j in 1:100) {
     
     agb_avg <- -1
     soc_avg <- -1
     
+    # Randomly generate activity year
     act_yr <- round(runif(1, min = 1, max = 14), 0)
     
+    # Simulated mean district level carbon stocks
     while(agb_avg < 0 & !is.na(agb_avg)) { agb_avg <- rnorm(1, mean = dstrct$AGB_AVG, sd = dstrct$AGB_SE * sqrt(40)) }
     while(soc_avg < 0 & !is.na(soc_avg)) { soc_avg <- rnorm(1, mean = dstrct$SOC_AVG, sd = dstrct$SOC_SE * sqrt(40)) }
     
-    agb_ls_coefs <- c(rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[1, 1], sd = sqrt(vcov(agb_ls_mdl)[1, 1])),
-                      rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 1], sd = sqrt(vcov(agb_ls_mdl)[2, 2])))
+    # Get 95th CI for coefficients
+    agb_ls_coefs <- as.data.frame(summary(agb_ls_mdl)[[4]])[, 1]
+    agb_ls_ses <- as.data.frame(summary(agb_ls_mdl)[[4]])[, 2]
+    #agb_ls_coefs <- agb_ls_coefs - (agb_ls_ses*1.96) # lower bound
+    #agb_ls_coefs <- agb_ls_coefs + (agb_ls_ses*1.96) # upper bound
+      
+    soc_ls_coefs <- soc_ls_mdl$coefficients$fixed
+    soc_ls_ses <- sqrt(diag(vcov(soc_ls_mdl)))
+    #soc_ls_coefs <- soc_ls_coefs - (soc_ls_ses*1.96) # lower bound
+    #soc_ls_coefs <- soc_ls_coefs + (soc_ls_ses*1.96) # upper bound
     
-    while(agb_ls_coefs[1] > 0) { agb_ls_coefs[1] <- 0 }
-    while(agb_ls_coefs[2] > 0) { agb_ls_coefs[2] <- rnorm(1, mean = as.data.frame(summary(agb_ls_mdl)[[4]])[2, 1], sd = sqrt(vcov(agb_ls_mdl)[2, 2])) }
+    agb_gn_coefs <- agb_gn_mdl@fixed.effects
+    #agb_gn_coefs[1] <- agb_gn_coefs[1]*1.5   # Can vary the asymptote to test for sensitivity of including Thai data.
+    agb_gn_ses <- agb_gn_mdl@se.fixed
+    #agb_gn_coefs <- agb_gn_coefs - (agb_gn_ses*1.96) # lower bound
+    #agb_gn_coefs <- agb_gn_coefs + (agb_gn_ses*1.96) # upper bound
     
-    soc_ls_coefs <- c(rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[1, 1], sd = sqrt(vcov(soc_ls_mdl)[1, 1])),
-                      rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 1], sd = sqrt(vcov(soc_ls_mdl)[2, 2])))
-    
-    while(soc_ls_coefs[1] > 0) { soc_ls_coefs[1] <- 0}
-    while(soc_ls_coefs[2] > 0) { soc_ls_coefs[2] <- rnorm(1, mean = as.data.frame(summary(soc_ls_mdl)[[4]])[2, 1], sd = sqrt(vcov(soc_ls_mdl)[2, 2])) }
-    
-    agb_gn_coefs <- c(rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[1, 1], sd = sqrt(vcov(agb_gn_mdl)[1, 1])),
-                      rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[2, 1], sd = sqrt(vcov(agb_gn_mdl)[2, 2])),
-                      rnorm(1, mean = as.data.frame(summary(agb_gn_mdl)[[10]])[3, 1], sd = sqrt(vcov(agb_gn_mdl)[3, 3])))
-    
-    for(k in 1:length(agb_gn_coefs)) {
-      if(agb_gn_coefs[k] < 0) { agb_gn_coefs[k] <- 0 }
-    }
-    
-    soc_gn_coefs <- c(rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[4]])[1, 1], sd = sqrt(vcov(soc_gn_mdl)[1, 1])),
-                      rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[4]])[2, 1], sd = sqrt(vcov(soc_gn_mdl)[2, 2])))
-    
-    while(soc_gn_coefs[1] > 0) {
-      soc_gn_coefs[1] <- rnorm(1, mean = as.data.frame(summary(soc_gn_mdl)[[4]])[1, 1], sd = sqrt(vcov(soc_gn_mdl)[2, 2]))
-      }
+    soc_gn_coefs <- soc_gn_mdl$coefficients$fixed
+    soc_gn_ses <- sqrt(diag(vcov(soc_gn_mdl)))
+    #soc_gn_coefs <- soc_gn_coefs - (soc_gn_ses*1.96) # lower bound   
+    #soc_gn_coefs <- soc_gn_coefs + (soc_gn_ses*1.96) # upper bound
     
     agc_prsrvd <- agb_avg * exp(agb_ls_coefs[1] + agb_ls_coefs[2] * act_yr)
     soc_prsrvd <- soc_avg * exp(soc_ls_coefs[1] + soc_ls_coefs[2] * act_yr)
-    agc_gained <- agb_gn_coefs[1]  / (1 + agb_gn_coefs[2] * (exp(1) ^ (-agb_gn_coefs[3] * act_yr)))
+    agc_gained <- agb_gn_coefs[1]  * (1 - exp(-agb_gn_coefs[2] * act_yr))^2
     soc_gained <- soc_avg * exp(soc_gn_coefs[1]  + soc_gn_coefs[2] * log(act_yr))
     frgn_sqstr <- 1.5 * act_yr
     
@@ -156,11 +154,10 @@ for(i in 1:nrow(dstrcts_c_df)) {
 
 soc_ls_coefs_vctr %>%
   as.data.frame() %>%
-  summarize(V1_avg = mean(V1),
-            V1_se = sqrt(var(V1)),
-            V2_avg = mean(V2),
-            V2_se = sqrt(var(V2)))
-
+  summarize(V1_avg = mean(`(Intercept)`),
+            V1_se = sqrt(var(`(Intercept)`)),
+            V2_avg = mean(age),
+            V2_se = sqrt(var(age)))
 
 #----------------------------------
 # Examine where the standard error of C losses, recovery, and gains stabilizes
@@ -228,11 +225,12 @@ net_ls * net_ls_c_se / 1000000
 
 hist_nums <- mg2000 %>%
   st_set_geometry(NULL) %>%
-  select(ADM2_EN, mangrov, total, othr_fr, mudflts) %>%
+  as_tibble() %>%
+  dplyr::select(ADM2_EN, mangrov, total, othr_fr, mudflts) %>%
   mutate(othr_fr = ifelse(is.na(othr_fr), 0, othr_fr),
          mudflts = ifelse(is.na(mudflts), 0, mudflts)) %>%
   mutate(historic_loss = total - (mangrov + othr_fr + mudflts)) %>%
-  left_join(select(summary, ADM2_EN, MGC_LOSS_AVG, MGC_LOSS_SE)) %>%
+  left_join(dplyr::select(summary, ADM2_EN, MGC_LOSS_AVG, MGC_LOSS_SE)) %>%
   mutate(hist_ls_c = historic_loss * MGC_LOSS_AVG,
          hist_ls_c_se = historic_loss * MGC_LOSS_SE)
 

@@ -132,9 +132,11 @@ agb_ls_dat <- read_csv("./data/raw/agb_loss.csv", col_names = c("Age", "LNRR")) 
 soc_ls_dat <- read_csv("./data/raw/soc_loss.csv", col_names = c("Age", "LNRR")) %>%
   mutate(Age = round(Age, 0))
 
-agb_gn_dat <- read_xlsx("./data/raw/sigit_data.xlsx") %>%
-  dplyr::select(dataset_variable, yr = "regeneration age", agb = mean) %>%
-  filter(dataset_variable == "Aboveground biomass carbon stock") %>%
+agb_gn_dat <- read_csv("./data/raw/agb_data.csv") %>%
+  dplyr::select(yr = "regeneration age", agb = mean, ref = short_reference,
+                type = site_name, lat = Latitude, lon = Longitude,) %>%
+  filter(lat >= -15 & lat <= 15, yr < 70) %>%
+  filter(!(ref %in% c("Lunstrum_and_Chen_2014"))) %>%
   as.data.frame()
 
 soc_gn_dat <- read_csv("./data/raw/soc_recovery.csv") %>%
@@ -166,24 +168,28 @@ soc_ls_plt <- soc_ls_dat %>%
 
 
 se_ribbon <- data.frame(yr = 1:70,
-                        ymax = (138.79387 + 18.7) / (1 + (25.16169 - 18.1) * exp(1) ^ ((-0.19670 - 0.05) * 1:70)),
-                        ymin = (138.79387 - 18.7) / (1 + (25.16169 + 18.1) * exp(1) ^ ((-0.19670 + 0.05) * 1:70)))
+                        ymax = (90.563 + 13.69) * (1 - exp(-(0.114 + 0.0358) * 1:70)) ^ 2,
+                        ymin = (90.563 - 13.69) * (1 - exp(-(0.114 - 0.0358) * 1:70)) ^ 2)
 
+agb_lines <- data.frame(x = 1:70, y = 90.56 * (1 - exp(-0.114*1:70))^2)
+#agb_lines1 <- data.frame(x = 1:70, y = 1.5*(90.56) * (1 - exp(-0.114*1:70))^2)
+#agb_lines2 <- data.frame(x = 1:70, y = 0.5*(90.56) * (1 - exp(-0.114*1:70))^2)
+  
 agb_gn_plt <- ggplot() +
   geom_ribbon(data = se_ribbon, aes(x = yr, ymin = ymin, ymax = ymax), fill = "grey85") +
-  geom_smooth(data = agb_gn_dat,
-              method = "nls",
-              mapping = aes(x = yr, y = agb),
-              formula = y ~ a / (1 + b * exp(1) ^ (-k * x)),
-              method.args = list(start = c(a = 138.794, b = 25.162, k = 0.197)),
-              se = FALSE) +
-  geom_point(data = agb_gn_dat, aes(x = yr, y = agb)) +
+  geom_point(data = filter(agb_gn_dat, type != "Anchor"), aes(x = yr, y = agb)) +
+  geom_point(data = filter(agb_gn_dat, type == "Anchor"), aes(x = yr, y = agb), col = "red") +
+  geom_line(data = agb_lines, aes(x = x, y = y), col = "blue") +
+  #geom_line(data = agb_lines1, aes(x = x, y = y), col = "blue", lty = 2) +
+  #geom_line(data = agb_lines2, aes(x = x, y = y), col = "blue", lty = 2) +
   xlab("Time since LULCC (Years)") +
-  ylab("Aboveground Biomass (Mg/ha)") +
+  ylab("Aboveground Carbon (Mg/ha)") +
   ggtitle("c. AGC Recovery") +
   theme_bw() +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
+
+#ggsave("./figs/figs1_AGBsensitivity.jpg", agb_gn_plt, height = 4, width = 6, device = "jpeg")
 
 soc_gn_plt <- soc_gn_dat %>%
   ggplot() +
@@ -205,9 +211,7 @@ all_plts <- grid.arrange(agb_ls_plt, soc_ls_plt, agb_gn_plt, soc_gn_plt)
 
 ggsave("./figs/fig4_models.jpg", all_plts, height = 6, width = 8, device = "jpeg")
 
-
 #----------------------------------------
-
 ###############################################################
 ## Fig. 3 - Bar charts of total C under different approaches ##
 ###############################################################
