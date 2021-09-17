@@ -1,4 +1,4 @@
-## Ch. 2 - Synthesizing diverse data sources to quantify net historical carbon emissions from mangrove loss
+## Net loss statistics underestimate carbon emissions associated with mangrove land use and land cover change
 
 #### Code and analyses for net carbon impacts of mangrove cover change in Thailand
 

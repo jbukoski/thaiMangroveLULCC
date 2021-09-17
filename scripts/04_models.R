@@ -17,8 +17,6 @@ library(tidyverse)
 ## AGB Loss Model ##
 ####################
 
-# Drop this as it looks weird and doesn't really make modeling sense.
-
 agb_ls_dat <- read_csv("./data/raw/agb_loss.csv", col_names = c("Age", "LNRR")) %>%
   mutate(Age = round(Age, 0))
 
@@ -28,11 +26,6 @@ agb_ls_mdl <- lm(LNRR ~ Age, data = agb_ls_dat)
 ####################
 ## SOC Loss Model ##
 ####################
-
-# Old SOC data
-#
-# soc_ls_dat <- read_csv("./data/raw/soc_loss.csv", col_names = c("age", "LNRR")) %>%
-#   mutate(age = round(Age, 0))
 
 soc_ls_dat <- read_csv("./data/raw/Dataset 1_Updated_16012020.csv", skip = 1) %>%
   select(dataset_variable, short_reference, site_name, age = "time_since_landuse_1", LNRR = ln_res_ratio) %>%
@@ -163,15 +156,11 @@ df <- data.frame(run = numeric(), rmse_avg = numeric(), rmse_sd = numeric())
 for(i in 2:300) {
   
   dat <- rmse_df[1:i]
-  
   rmse_avg <- mean(dat)
   rmse_sd <- sd(dat)
-  
   df <- bind_rows(df, c(run = i, rmse_avg = rmse_avg, rmse_sd = rmse_sd))
   
-  
 }
-
 
 figS3 <- ggplot(df) +
   geom_point(aes(x = run, y = rmse_avg)) +
@@ -184,7 +173,6 @@ figS3 <- ggplot(df) +
 
 ggsave("./figs/fig_s3.jpg", figS3, device = "jpeg", width = 6, height = 4, units = "in")
 
-# Just a github test
 
 #-------------------------
 # Clean up work space
