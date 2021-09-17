@@ -182,8 +182,6 @@ figS3 <- ggplot(df) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
 
-mean(rmse_df)
-
 ggsave("./figs/fig_s3.jpg", figS3, device = "jpeg", width = 6, height = 4, units = "in")
 
 
