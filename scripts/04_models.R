@@ -85,9 +85,7 @@ agb_gn_mdl <- saemix.fit1@results
 #   ggplot() +
 #   geom_point(aes(x = age, y = agc, col = (type == "Anchor"))) +
 #   geom_line(aes(x = x, y = y), data = line_dat) +
-#   theme_bw() 
-
-
+#   theme_bw()
 
 #---------------
 ########################

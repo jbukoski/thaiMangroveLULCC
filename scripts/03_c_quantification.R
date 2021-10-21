@@ -222,9 +222,6 @@ st_write(dstrcts_c, dsn = paste0(proc_dir, "shapefiles/dstrcts_c"),
 gdata::keep(proc_dir, raw_dir, scratch_dir, sure = T)
 
 #---------------------------------------------------
-
-#---------------------------------------------
-
 #############################################
 ## Potential carbon gains from restoration ##
 #############################################

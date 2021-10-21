@@ -92,7 +92,7 @@ st_write(mg2014_albers, paste0(out_dir, "shapefiles/mg2014_102028.shp"), append 
 ####################
 
 #------------------------
-# Use GDAL/OGR command line tools to process rasters given better memory issues in R
+# Use GDAL/OGR command line tools to process rasters given memory issues in R
 #
 # See resample_rasters.sh, which does the following:
 #   - 1. Resamples Sanderman SOC data to Simard AGB data
